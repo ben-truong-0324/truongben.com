@@ -9,6 +9,8 @@ headless: true
 weight: 10
 
 author: admin
+
+# Optional styling and background configs
 #design:
 #  background:
 #    color: '#090a0b'
@@ -18,7 +20,7 @@ author: admin
 #  css_class: fullscreen
 ---
 
-👋 Hi, there! I'm **Alice**, a machine learning researcher at Netflix.
+👋 Hi, there! I'm **Ben Truong**, a machine learning engineer and DevOps passionate about GenAI applications.  
 {style="font-size: 1.2rem; background: #FFB76B; background: linear-gradient(to right, #FFB76B 0%, #FFA73D 30%, #FF7C00 60%, #FF7F04 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;"}
 
-Check out my [resumé](/about/) and portfolio below 😍
+Check out my [resumé](/about/) and past work below ☕
