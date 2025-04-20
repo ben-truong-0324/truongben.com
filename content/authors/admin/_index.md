@@ -27,7 +27,7 @@ education:
   courses:
   - course: M.S. Computer Science (Machine Learning)
     institution: Georgia Institute of Technology
-    year: 2026
+    year: 2025
   - course: B.A. Cognitive Science
     institution: UC Berkeley
     year: 2019
@@ -36,7 +36,7 @@ education:
 social:
   - icon: envelope
     icon_pack: fas
-    link: "mailto:ktruong43@gatech.edu"
+    link: 'about/#contact'
   - icon: linkedin
     icon_pack: fab
     link: https://www.linkedin.com/in/truongben
@@ -46,8 +46,6 @@ social:
   - icon: globe
     icon_pack: fas
     link: https://truongben.com
-
-# Link to a PDF of your resume/CV from the About widget
 - icon: cv
   icon_pack: ai
   link: files/resume.pdf
@@ -55,3 +53,10 @@ social:
 # Enter email to use Gravatar or enable contact widget
 email: ktruong43@gatech.edu
 ---
+Ben Truong is a machine learning engineer and technical lead with a cross-disciplinary background in NLP, public-sector technology, and operational analytics. He is currently pursuing his M.S. in Computer Science (Machine Learning track) at Georgia Tech, while also leading full-stack data products and applied ML projects in civic tech and nonprofit spaces.
+
+His recent work includes a Kubernetes-deployed dashboard for global financial inclusion, a reinforcement learning system for stock trading, and scalable LLM evaluation pipelines. Ben also brings 3+ years of leadership experience in enterprise operations and military communications, with a strong focus on reproducibility, documentation, and building systems that bridge business and technical teams.
+
+Outside of work, he’s passionate about open-source tools, community mentoring, and building socially impactful AI systems.
+
+{{< icon name="download" pack="fas" >}} {{< staticref "files/resume.pdf" "newtab" >}}Download{{< /staticref >}} my resumé as a PDF.
