@@ -23,29 +23,21 @@ date_format: Jan 2006
 #   Leave other parameters empty if not required.
 #   Begin multi-line descriptions with YAML's `|2-` multi-line prefix.
 item:
-  - certificate_url: https://www.coursera.org
+  - certificate_url: https://verify.skilljar.com/c/ouh4fnqycd83
+    date_start: '2024-12-21'
     date_end: ''
-    date_start: '2021-01-25'
-    description: ''
-    organization: Coursera
-    organization_url: https://www.coursera.org
-    title: Neural Networks and Deep Learning
+    description: Completed technical onboarding and proficiency certification for Palantir AIP pipeline development and deployment.
+    organization: Palantir
+    organization_url: https://www.palantir.com
+    title: Foundry & AIP Builder Foundations
     url: ''
-  - certificate_url: https://www.edx.org
+  - certificate_url: https://www.citiprogram.org/verify/?wfbaacd4b-83ae-4f34-af06-fb377e96db77-64733975
+    date_start: '2024-01-15'
     date_end: ''
-    date_start: '2021-01-01'
-    description: Formulated informed blockchain models, hypotheses, and use cases.
-    organization: edX
-    organization_url: https://www.edx.org
-    title: Blockchain Fundamentals
-    url: https://www.edx.org/professional-certificate/uc-berkeleyx-blockchain-fundamentals
-  - certificate_url: https://www.datacamp.com
-    date_end: '2020-12-21'
-    date_start: '2020-07-01'
-    description: ''
-    organization: DataCamp
-    organization_url: https://www.datacamp.com
-    title: 'Object-Oriented Programming in R'
+    description: Certified in ethical research practices for studies involving de-identified human data and biospecimens.
+    organization: CITI Program
+    organization_url: https://www.citiprogram.org
+    title: Human Research — Data or Specimens Only
     url: ''
 
 design:

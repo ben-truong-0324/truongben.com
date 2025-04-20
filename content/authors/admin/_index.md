@@ -6,20 +6,19 @@ title: Ben Truong
 superuser: true
 
 # Role/position
-role: Machine Learning Engineer & Technical Lead
+role: ML DevOps & LLM Research
 
 # Status emoji
 status:
   icon: ⚙️
 
 # Short bio (displayed in user profile at end of posts)
-bio: ML Engineer with a background in NLP, operational analytics, and public-sector innovation. Passionate about applied AI for good.
+bio: ML Engineer with a background in NLP, operational analytics, and public-sector innovation. Passionate about GenAI and Federated ML at scale.
 
 # Interests (optional display section)
 interests:
-- Applied Machine Learning
-- Natural Language Processing
-- Public Sector Technology
+- ML Analytics Pipeline
+- NLP on Federated Learning
 - Entrepreneurship & Nonprofits
 
 # Education (optional section that appears in widgets or sidebar)
@@ -53,10 +52,10 @@ social:
 # Enter email to use Gravatar or enable contact widget
 email: ktruong43@gatech.edu
 ---
-Ben Truong is a machine learning engineer and technical lead with a cross-disciplinary background in NLP, public-sector technology, and operational analytics. He is currently pursuing his M.S. in Computer Science (Machine Learning track) at Georgia Tech, while also leading full-stack data products and applied ML projects in civic tech and nonprofit spaces.
+I am a ML engineer with DevOps experience and cross-disciplinary background in NLP, public-sector technology, and operational analytics. I'm currently pursuing my M.S. in Computer Science (ML track) at Georgia Tech, while also leading ML analytics products and GenAI application pipelines in civic tech and nonprofit spaces.
 
-His recent work includes a Kubernetes-deployed dashboard for global financial inclusion, a reinforcement learning system for stock trading, and scalable LLM evaluation pipelines. Ben also brings 3+ years of leadership experience in enterprise operations and military communications, with a strong focus on reproducibility, documentation, and building systems that bridge business and technical teams.
+My recent work includes a ML-driven dashboard for financial insights on K8s, a RL model for stock trading, and a scalable LLM evaluation pipelines for hospital coding. I bring over three years of leadership experience in enterprise operations and 8 years in military Signal operations. My focus is on reproducibility and documentation for joint development between business and technical teams.
 
-Outside of work, he’s passionate about open-source tools, community mentoring, and building socially impactful AI systems.
+Outside of work, I’m passionate about open-source tools, community mentoring, and ML on consumer hardware.
 
 {{< icon name="download" pack="fas" >}} {{< staticref "files/resume.pdf" "newtab" >}}Download{{< /staticref >}} my resumé as a PDF.
