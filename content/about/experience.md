@@ -25,7 +25,7 @@ experience:
   - title: Area Manager II, Production Analytics
     company: Amazon.com
     company_url: https://www.amazon.com
-    company_logo: org-amazon
+    # company_logo: org-amazon
     location: Sacramento, CA
     date_start: 2021-07-01
     date_end: 2024-05-01
@@ -38,7 +38,7 @@ experience:
   - title: Technical Team Lead
     company: ConnectNGive.org
     company_url: https://connectngive.org
-    company_logo: org-cng
+    # company_logo: org-cng
     location: Morgan Hill, CA
     date_start: 2020-04-01
     date_end: 2021-07-01
@@ -50,7 +50,7 @@ experience:
   - title: Network Systems Specialist
     company: USAR Signal Corps
     company_url: ''
-    company_logo: org-usar
+    # company_logo: org-usar
     location: Sacramento, CA
     date_start: 2019-05-01
     date_end: ''
