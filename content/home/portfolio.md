@@ -32,8 +32,8 @@ content:
       tag: ML
     - name: Generative AI
       tag: GenAI
-    - name: NLP
-      tag: NLP
+    - name: Federated Learning
+      tag: FL
 
 design:
   columns: '1'
