@@ -47,9 +47,8 @@ profiles:
 #    url: https://orcid.org/
 
 interests:
-  - Artificial Intelligence
-  - Machine Learning
-  - Retrieval-Augmented Generation
+  - MLOps
+  - GenAI
 
 education:
   - area: MSc. Computer Science
