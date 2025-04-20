@@ -43,12 +43,12 @@ social:
   - icon: github
     icon_pack: fab
     link: https://github.com/ben-truong-0324
-  - icon: globe
-    icon_pack: fas
-    link: https://truongben.com
-- icon: cv
-  icon_pack: ai
-  link: files/resume.pdf
+  # - icon: globe
+  #   icon_pack: fas
+  #   link: https://truongben.com
+# - icon: cv
+#   icon_pack: ai
+#   link: files/resume.pdf
 
 # Enter email to use Gravatar or enable contact widget
 email: ktruong43@gatech.edu
