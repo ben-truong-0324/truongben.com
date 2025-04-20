@@ -1,154 +1,73 @@
 ---
 # Display name
-title: Ben Truong
+title: Alice Wu (吳恩達)
 
-# Name pronunciation (optional)
-name_pronunciation: ''
+# Is this the primary user of the site?
+superuser: true
 
-# Full name (for SEO)
-first_name: Ben
-last_name: Truong
+# Role/position
+role: ''
 
 # Status emoji
 status:
   icon: ☕️
 
-# Is this the primary user of the site?
-superuser: true
+# Organizations/Affiliations
+#organizations:
+#- name: 腾讯
+#  url: ""
 
-# Highlight the author in author lists? (true/false)
-highlight_name: true
+# Short bio (displayed in user profile at end of posts)
+bio: My research interests include distributed robotics, mobile computing and programmable matter.
 
-# Role/position/tagline
-role: MSc. Student
+#interests:
+#- Artificial Intelligence
+#- Computational Linguistics
+#- Information Retrieval
 
-# Organizations/Affiliations to display in Biography blox
-organizations:
-  - name: GA Tech
-    url: https://www.gatech.edu/
+#education:
+#  courses:
+#  - course: PhD in Artificial Intelligence
+#    institution: Stanford University
+#    year: 2012
+#  - course: MEng in Artificial Intelligence
+#    institution: Massachusetts Institute of Technology
+#    year: 2009
+#  - course: BSc in Artificial Intelligence
+#    institution: Massachusetts Institute of Technology
+#    year: 2008
 
-# Social network links
-# Need to use another icon? Simply download the SVG icon to your `assets/media/icons/` folder.
-profiles:
-  - icon: at-symbol
-    url: 'mailto:ben.truong.0324@gmail.com'
-    label: E-mail Me
-#  - icon: brands/x
-#    url: https://twitter.com/GetResearchDev
-#  - icon: brands/instagram
-#    url: https://www.instagram.com/
-  - icon: brands/github
-    url: https://github.com/ben-truong-0324
-  - icon: brands/linkedin
-    url: https://www.linkedin.com/in/truongben
-#  - icon: academicons/google-scholar
-#    url: https://scholar.google.com/
-#  - icon: academicons/orcid
-#    url: https://orcid.org/
+# Social/Academic Networking
+# For available icons, see: https://docs.hugoblox.com/getting-started/page-builder/#icons
+#   For an email link, use "fas" icon pack, "envelope" icon, and a link in the
+#   form "mailto:your-email@example.com" or "#contact" for contact widget.
+social:
+  - icon: envelope
+    icon_pack: fas
+    link: 'about/#contact' # For a direct email link, use "mailto:test@example.org".
+  - icon: twitter
+    icon_pack: fab
+    link: https://twitter.com/wowchemy
+  - icon: instagram
+    icon_pack: fab
+    link: https://instagram.com/geocushen
+# Uncomment below for Github link
+#- icon: github
+#  icon_pack: fab
+#  link: https://github.com/gcushen
 
-interests:
-  - MLOps
-  - GenAI
+# Link to a PDF of your resume/CV from the About widget.
+# To enable, copy your resume/CV to `static/files/cv.pdf` and uncomment the lines below.
+# - icon: cv
+#   icon_pack: ai
+#   link: files/cv.pdf
 
-education:
-  - area: MSc. Computer Science
-    institution: Georgia Institute of Technology
-    date_start: 2023-08-15
-    date_end: 2025
-    summary: |
-      Courses included:
-      - HCI, CN
-      - R4AI, KBAI
-      - ML4T
-  - area: BA Cognitive Science
-    institution: UC Berkeley
-    date_start: 2017-08-15
-    date_end: 2019-05-31
-    summary: |
-      Courses included:
-      - lorem ipsum dolor sit amet, consectetur adipiscing elit
-      - lorem ipsum dolor sit amet, consectetur adipiscing elit
-      - lorem ipsum dolor sit amet, consectetur adipiscing elit
-work:
-  - position: Area Manager
-    company_name: Amazon
-    company_url: ''
-    company_logo: ''
-    date_start: 2021-01-01
-    date_end: ''
-    summary: |2-
-      Responsibilities include:
-      - lorem ipsum dolor sit amet, consectetur adipiscing elit
-      - lorem ipsum dolor sit amet, consectetur adipiscing elit
-      - lorem ipsum dolor sit amet, consectetur adipiscing elit
-  - position: Backend Software Engineer
-    company_name: X
-    company_url: ''
-    company_logo: ''
-    date_start: 2016-01-01
-    date_end: 2020-12-31
-    summary: |
-      Responsibilities include:
-      - Migrated infrastructure to a new data center
-      - lorem ipsum dolor sit amet, consectetur adipiscing elit
-      - lorem ipsum dolor sit amet, consectetur adipiscing elit
-
-# Skills
-# Add your own SVG icons to `assets/media/icons/`
-skills:
-  - name: Technical Skills
-    items:
-      - name: Python
-        description: ''
-        percent: 80
-        icon: code-bracket
-      - name: Data Science
-        description: ''
-        percent: 100
-        icon: chart-bar
-      - name: SQL
-        description: ''
-        percent: 40
-        icon: circle-stack
-  - name: Hobbies
-    color: '#eeac02'
-    color_border: '#f0bf23'
-    items:
-      - name: Hiking
-        description: ''
-        percent: 60
-        icon: person-simple-walk
-      - name: Cats
-        description: ''
-        percent: 100
-        icon: cat
-      - name: Photography
-        description: ''
-        percent: 80
-        icon: camera
-
-languages:
-  - name: English
-    percent: 100
-  - name: Chinese
-    percent: 75
-  - name: Portuguese
-    percent: 25
-
-# Awards.
-#   Add/remove as many awards below as you like.
-#   Only `title`, `awarder`, and `date` are required.
-#   Begin multi-line `summary` with YAML's `|` or `|2-` multi-line prefix and indent 2 spaces below.
-awards:
-  - title: Glushko Undergraduate Distinguished Thesis
-    url: https://www.coursera.org/learn/neural-networks-deep-learning
-    date: '2019-05-25'
-    awarder: UC Berkeley
-    icon: 
-    summary: |
-      Award given to up to 5 students out of an average 250 student cohort.
+# Enter email to display Gravatar (if Gravatar enabled in Config)
+#email: ""
 ---
 
-## About Me
+Alice Wu is a professor of artificial intelligence at the Stanford AI Lab. Her research interests include distributed robotics, mobile computing and programmable matter. She leads the Robotic Neurobiology group, which develops self-reconfiguring robots, systems of self-organizing robots, and mobile sensor networks.
 
-Ben Truong is a MSc. student of computer science specializing in Machine Learinng at Georgia Institute of Technology. His research interests include RAG GenAI, bilingual LM, and edge computing. He has non-tech experience in entrepreneurship, project management, and continuous improvement.
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed neque elit, tristique placerat feugiat ac, facilisis vitae arcu. Proin eget egestas augue. Praesent ut sem nec arcu pellentesque aliquet. Duis dapibus diam vel metus tempus vulputate.
+
+{{< icon name="download" pack="fas" >}} {{< staticref "uploads/resume.pdf" "newtab" >}}Download{{< /staticref >}} my resumé as a PDF.
