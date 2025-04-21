@@ -10,7 +10,7 @@ role: ML DevOps & LLM Research
 
 # Status emoji
 status:
-  icon: ⚙️
+  icon: ☕
 
 # Short bio (displayed in user profile at end of posts)
 bio: ML Engineer with a background in NLP, operational analytics, and public-sector innovation. Passionate about GenAI and Federated ML at scale.
