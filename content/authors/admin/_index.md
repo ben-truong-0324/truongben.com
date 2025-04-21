@@ -58,4 +58,4 @@ My recent work includes a ML-driven dashboard for financial insights on K8s, a R
 
 Outside of work, I’m passionate about open-source tools, community mentoring, and ML on consumer hardware.
 
-{{< icon name="download" pack="fas" >}} {{< staticref "files/resume.pdf" "newtab" >}}Download{{< /staticref >}} my resumé as a PDF.
+{{< icon name="download" pack="fas" >}} {{< staticref "uploads/resume.pdf" "newtab" >}}Download{{< /staticref >}} my resumé as a PDF.
