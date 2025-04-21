@@ -34,6 +34,10 @@ content:
       tag: GenAI
     - name: Federated Learning
       tag: FL
+    - name: DevOps
+      tag: DevOps
+    - name: NLP
+      tag: NLP
 
 design:
   columns: '1'

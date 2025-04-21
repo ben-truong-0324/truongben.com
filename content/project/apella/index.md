@@ -4,6 +4,7 @@ summary: Summarizing ballot tickets for voters using NLP
 tags:
   - ML
   - GenAI
+  - DevOps
 date: 2019-10-01
 external_link: https://github.com/ben-truong-0324/Apella
 ---
