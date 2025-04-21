@@ -1,8 +1,9 @@
 ---
-title: Recommendation Systems
-summary: Write about your project here...
+title: Voter's Sentiment on Ballot Tickets with NLP
+summary: Summarizing ballot tickets for voters using NLP
 tags:
   - ML
-date: 2022-01-01
-external_link: http://github.com
+  - GenAI
+date: 2019-10-01
+external_link: https://github.com/ben-truong-0324/Apella
 ---

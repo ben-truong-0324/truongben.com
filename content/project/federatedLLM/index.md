@@ -1,8 +1,10 @@
 ---
-title: Recommendation Systems
-summary: Write about your project here...
+title: Orchestrated LLM updated over Federated Framework
+summary: Orchestration for LLM model update on edge nodes with centralized learning
 tags:
   - ML
-date: 2022-01-01
-external_link: http://github.com
+  - GenAI
+  - FL
+date: 2024-12-12
+external_link: https://github.com/ben-truong-0324/federated-llm
 ---
