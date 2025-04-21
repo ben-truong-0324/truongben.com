@@ -1,5 +1,5 @@
 ---
-title: Orchestrated LLM updated over Federated Framework
+title: Orchestrated LLM over Federated Network
 summary: Orchestration for LLM model update on edge nodes with centralized learning
 tags:
   - ML

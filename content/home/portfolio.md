@@ -28,9 +28,9 @@ content:
   filter_button:
     - name: All
       tag: '*'
-    - name: Machine Learning
+    - name: ML
       tag: ML
-    - name: Generative AI
+    - name: Gen AI
       tag: GenAI
     - name: Federated Learning
       tag: FL
