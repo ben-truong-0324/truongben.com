@@ -32,3 +32,6 @@ To build and preview locally:
 git clone https://github.com/ben-truong-0324/truongben.com.git
 cd truongben.com
 hugo serve
+
+chmod +x gitpush.sh
+./gitpush.sh
