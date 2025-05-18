@@ -18,10 +18,10 @@ marketing:
     site_type: Person
     local_business_type: ''
     org_name: ''
-    description: 'A highly-customizable Hugo blog theme powered by Wowchemy website builder.'
+    description: 'GenAI Engineer with cloud DevOps experience deploying LLM and ML solutions.'
     twitter: 'GetResearchDev'
   analytics:
-    google_analytics: ''
+    google_analytics: 'G-9TFHNNWCE6'
     baidu_tongji: ''
     google_tag_manager: ''
     microsoft_clarity: ''
@@ -69,7 +69,7 @@ features:
   privacy_pack:
     enable: false
   repository:
-    url: 'https://github.com/<username>/<repository>'
+    url: 'https://github.com/ben-truong-0324/truongben.com'
     content_dir: content
     branch: main
   avatar:
