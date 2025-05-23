@@ -65,18 +65,6 @@ summary: "$POST_SUMMARY"
 
 # $POST_TITLE
 
-Start writing your blog post content here using Markdown.
-You can use standard Markdown formatting:
-
-## Subheading Example
-
-This is a paragraph.
-
-\`\`\`python
-# Example Python code block
-def hello_world():
-    print("Hello, Hugo!")
-\`\`\`
 
 EOF
 

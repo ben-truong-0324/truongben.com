@@ -3,3 +3,4 @@ resources/
 .hugo_build.lock
 gitpush.bat
 gitpush.sh
+.env
