@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Understanding Large Language Models</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f9fafb; /* Light gray background */
+            color: #1f2937; /* Dark gray text */
+        }
+        .header {
+            background-color: #ffffff;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .section-title {
+            font-size: 1.75rem; /* 28px */
+            font-weight: 600;
+            color: #111827; /* Even darker gray for titles */
+            margin-bottom: 1.5rem; /* 24px */
+            padding-bottom: 0.5rem; /* 8px */
+            border-bottom: 2px solid #3b82f6; /* Blue accent */
+        }
+        .subsection-title {
+            font-size: 1.25rem; /* 20px */
+            font-weight: 500;
+            color: #374151; /* Medium gray */
+            margin-top: 2rem; /* 32px */
+            margin-bottom: 1rem; /* 16px */
+        }
+        .card {
+            background-color: #ffffff;
+            border-radius: 0.75rem; /* 12px */
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            padding: 1.5rem; /* 24px */
+            margin-bottom: 1.5rem; /* 24px */
+        }
+        .slider-container {
+            margin-bottom: 1rem; /* 16px */
+        }
+        .slider-label {
+            font-size: 0.875rem; /* 14px */
+            font-weight: 500;
+            color: #4b5563; /* Gray */
+            margin-bottom: 0.5rem; /* 8px */
+        }
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 8px;
+            background: #d1d5db; /* Light gray track */
+            border-radius: 5px;
+            outline: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #3b82f6; /* Blue thumb */
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #3b82f6; /* White border around thumb */
+        }
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            background: #3b82f6; /* Blue thumb */
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #3b82f6;
+        }
+        .description {
+            font-size: 0.875rem; /* 14px */
+            color: #6b7280; /* Lighter gray for descriptions */
+            margin-top: 0.75rem; /* 12px */
+            line-height: 1.5;
+        }
+        .d3-chart {
+            min-height: 250px; /* Ensure space for charts */
+            width: 100%;
+            background-color: #f9fafb; /* Slightly off-white for chart background */
+            border-radius: 0.5rem; /* 8px */
+            padding: 1rem; /* 16px */
+            border: 1px solid #e5e7eb;
+        }
+        .token-bar {
+            fill: #60a5fa; /* Light blue for bars */
+            transition: all 0.3s ease-in-out;
+        }
+        .token-bar:hover {
+            fill: #2563eb; /* Darker blue on hover */
+        }
+        .axis-text {
+            font-size: 10px;
+            fill: #4b5563;
+        }
+        .axis path, .axis line {
+            stroke: #d1d5db;
+        }
+        .explainer-box {
+            background-color: #eef2ff; /* Light indigo background */
+            border: 1px solid #c7d2fe; /* Indigo border */
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            margin-top: 1rem;
+        }
+        .explainer-box-title {
+            font-weight: 600;
+            color: #4338ca; /* Indigo text */
+            margin-bottom: 0.75rem;
+        }
+        .diagram-placeholder {
+            width: 100%;
+            height: 200px;
+            background-color: #e0e7ff;
+            border: 2px dashed #a5b4fc;
+            border-radius: 0.375rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-style: italic;
+            color: #6366f1;
+        }
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .section-title {
+                font-size: 1.5rem; /* 24px */
+            }
+            .subsection-title {
+                font-size: 1.125rem; /* 18px */
+            }
+            .card {
+                padding: 1rem; /* 16px */
+            }
+            .d3-chart {
+                min-height: 200px;
+            }
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <header class="header py-6">
+        <div class="container mx-auto px-4 md:px-6">
+            <h1 class="text-3xl md:text-4xl font-bold text-center text-blue-600">Demystifying Large Language Models</h1>
+            <p class="text-center text-gray-600 mt-2 text-sm md:text-base">An Interactive Guide to Configuration, Evaluation, and Business Impact</p>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 md:px-6 py-8">
+
+        <section id="configuration" class="mb-12">
+            <h2 class="section-title">🔧 LLM Configuration Parameters</h2>
+            <p class="text-gray-700 mb-6">These parameters control how an LLM generates text. Adjust the sliders to see how they influence the probability of picking different words (tokens).</p>
+
+            <div class="card grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+                <div>
+                    <h3 class="subsection-title">Temperature</h3>
+                    <div class="slider-container">
+                        <label for="temperature" class="slider-label">Temperature: <span id="temperatureValue">0.7</span></label>
+                        <input type="range" id="temperature" min="0.1" max="2.0" step="0.1" value="0.7" class="w-full">
+                    </div>
+                    <p class="description">
+                        <strong>What it does:</strong> Controls randomness. Lower values make the model more deterministic and focused, picking the most likely words. Higher values increase randomness, leading to more diverse and sometimes surprising outputs.
+                        <br><strong>Effect:</strong> High temperature flattens the probability distribution (more words are equally likely). Low temperature sharpens it (a few words are much more likely).
+                    </p>
+                </div>
+                <div id="tempChart" class="d3-chart"></div>
+            </div>
+
+            <div class="card grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+                <div>
+                    <h3 class="subsection-title">Top-p (Nucleus Sampling)</h3>
+                    <div class="slider-container">
+                        <label for="top_p" class="slider-label">Top-p: <span id="topPValue">0.9</span></label>
+                        <input type="range" id="top_p" min="0.1" max="1.0" step="0.05" value="0.9" class="w-full">
+                    </div>
+                    <p class="description">
+                        <strong>What it does:</strong> Selects the smallest set of words whose cumulative probability exceeds the 'p' value. The model then samples only from this "nucleus" of high-probability words.
+                        <br><strong>Effect:</strong> Prevents the model from picking very unlikely words, ensuring quality while still allowing for diversity based on the probability mass.
+                    </p>
+                </div>
+                <div id="topPChart" class="d3-chart"></div>
+            </div>
+
+            <div class="card grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+                <div>
+                    <h3 class="subsection-title">Top-k</h3>
+                    <div class="slider-container">
+                        <label for="top_k" class="slider-label">Top-k: <span id="topKValue">40</span></label>
+                        <input type="range" id="top_k" min="1" max="100" step="1" value="40" class="w-full">
+                    </div>
+                    <p class="description">
+                        <strong>What it does:</strong> Restricts the model to consider only the 'k' most probable words at each step of generation.
+                        <br><strong>Effect:</strong> Reduces the chance of picking odd or irrelevant words by limiting the pool of choices. A very small 'k' can make output repetitive.
+                    </p>
+                </div>
+                <div id="topKChart" class="d3-chart"></div>
+            </div>
+            
+            <div class="card grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+                <div>
+                    <h3 class="subsection-title">Max Tokens (Max Length)</h3>
+                    <div class="slider-container">
+                        <label for="max_tokens" class="slider-label">Max Tokens: <span id="maxTokensValue">100</span></label>
+                        <input type="range" id="max_tokens" min="10" max="500" step="10" value="100" class="w-full">
+                    </div>
+                    <p class="description">
+                        <strong>What it does:</strong> Sets the maximum number of tokens (words or parts of words) the model can generate in a single response.
+                        <br><strong>Effect:</strong> Directly controls the length of the output. Useful for managing costs and ensuring responses are concise.
+                    </p>
+                    <div id="maxTokensPreview" class="mt-4 p-3 bg-gray-100 rounded-md border border-gray-300 text-sm text-gray-700 overflow-hidden">
+                        <p class="font-semibold mb-1">Sample Output Preview:</p>
+                        <span id="maxTokensText">The quick brown fox jumps over the lazy dog. This is a sample text to demonstrate how max tokens can affect the output length. If the limit is reached, the text will be truncated...</span>
+                    </div>
+                </div>
+                <div id="maxTokensChart" class="d3-chart"></div>
+            </div>
+
+            <div class="card grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+                <div>
+                    <h3 class="subsection-title">Frequency Penalty</h3>
+                    <div class="slider-container">
+                        <label for="frequency_penalty" class="slider-label">Frequency Penalty: <span id="freqPenaltyValue">0.0</span></label>
+                        <input type="range" id="frequency_penalty" min="-2.0" max="2.0" step="0.1" value="0.0" class="w-full">
+                    </div>
+                    <p class="description">
+                        <strong>What it does:</strong> Adjusts the likelihood of a token based on how often it has already appeared in the generated text. Positive values decrease the chance of repetition.
+                        <br><strong>Effect:</strong> Higher values discourage the model from repeating the same words or phrases, making the output more varied.
+                    </p>
+                </div>
+                <div id="freqPenaltyChart" class="d3-chart"></div>
+            </div>
+        </section>
+
+        <section id="evaluation" class="mb-12">
+            <h2 class="section-title">🧪 Evaluation Metrics for LLM Outputs</h2>
+            <p class="text-gray-700 mb-6">These metrics help assess the quality, coherence, and accuracy of LLM-generated text. The charts show simulated scores for different models or scenarios.</p>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div class="card">
+                    <h3 class="subsection-title">Perplexity</h3>
+                    <div id="perplexityChart" class="d3-chart"></div>
+                    <p class="description">
+                        Measures how well a probability model predicts a sample. <strong>Lower is better</strong>, indicating the model is less "surprised" by the text it sees. Often used to compare general language understanding.
+                    </p>
+                </div>
+
+                <div class="card">
+                    <h3 class="subsection-title">ROUGE</h3>
+                    <div id="rougeChart" class="d3-chart"></div>
+                    <p class="description">
+                        (Recall-Oriented Understudy for Gisting Evaluation) Compares an automatically produced summary against reference summaries. Measures overlap of n-grams, word sequences, etc. <strong>Higher is better.</strong>
+                    </p>
+                </div>
+
+                <div class="card">
+                    <h3 class="subsection-title">BLEU</h3>
+                    <div id="bleuChart" class="d3-chart"></div>
+                    <p class="description">
+                        (Bilingual Evaluation Understudy) Primarily used for evaluating machine translation quality. It measures the similarity between a candidate translation and one or more reference translations. <strong>Higher is better.</strong>
+                    </p>
+                </div>
+                
+                <div class="card">
+                    <h3 class="subsection-title">BERTScore</h3>
+                    <div id="bertScoreChart" class="d3-chart"></div>
+                    <p class="description">
+                        Leverages contextual embeddings from BERT to measure semantic similarity between generated text and reference text. More robust than n-gram based metrics for capturing meaning. <strong>Higher is better.</strong>
+                    </p>
+                </div>
+
+                <div class="card">
+                    <h3 class="subsection-title">Hallucination Rate</h3>
+                    <div id="hallucinationChart" class="d3-chart"></div>
+                    <p class="description">
+                        Measures the percentage of generated content that is nonsensical, factually incorrect, or unfaithful to the provided source input. <strong>Lower is better.</strong>
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <section id="business" class="mb-12">
+            <h2 class="section-title">💼 Business-Oriented Metrics</h2>
+            <p class="text-gray-700 mb-6">Beyond quality, LLMs must meet business needs. These metrics track operational performance and cost-effectiveness.</p>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="card">
+                    <h3 class="subsection-title">Latency (Response Time)</h3>
+                    <div id="latencyChart" class="d3-chart"></div>
+                    <p class="description">
+                        The time it takes for the LLM to generate a response after receiving a prompt. Critical for user experience in real-time applications. <strong>Lower is better.</strong>
+                    </p>
+                </div>
+
+                <div class="card">
+                    <h3 class="subsection-title">Cost per Token / Interaction</h3>
+                    <div id="costChart" class="d3-chart"></div>
+                    <p class="description">
+                        The expense associated with using an LLM, often measured per token (input + output) or per API call. A key factor in scalability and ROI. <strong>Lower is better.</strong>
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <section id="advanced" class="mb-12">
+            <h2 class="section-title">🧩 Advanced Capabilities</h2>
+            <p class="text-gray-700 mb-6">LLMs can be enhanced with external knowledge or specialized training for improved performance on specific tasks.</p>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="card">
+                    <h3 class="subsection-title">Retrieval-Augmented Generation (RAG)</h3>
+                    <div class="explainer-box">
+                        <h4 class="explainer-box-title">How RAG Works:</h4>
+                        <p class="description mb-4">RAG combines the generative power of LLMs with information retrieval from external knowledge sources. This allows the model to access up-to-date or domain-specific information not present in its original training data.</p>
+                        <div class="diagram-placeholder">
+                            <span>Simplified RAG Flowchart Placeholder</span>
+                        </div>
+                        <p class="description mt-4"><strong>Process:</strong> User query → Retrieve relevant documents → Combine query + documents → Feed to LLM → Generate informed response.</p>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3 class="subsection-title">Fine-Tuning</h3>
+                     <div class="explainer-box">
+                        <h4 class="explainer-box-title">The Fine-Tuning Process:</h4>
+                        <p class="description mb-4">Fine-tuning adapts a pre-trained base LLM to perform better on specific tasks or understand particular domains by training it further on a smaller, targeted dataset.</p>
+                        <div class="diagram-placeholder">
+                             <span>Simplified Fine-Tuning Timeline Placeholder</span>
+                        </div>
+                        <p class="description mt-4"><strong>Process:</strong> Base LLM → Train on domain-specific dataset (e.g., medical texts, legal documents) → Specialized LLM with improved performance on that domain.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="py-8 text-center border-t border-gray-200">
+        <p class="text-gray-500 text-sm">&copy; 2024 LLM Interactive Explainer. For educational purposes.</p>
+    </footer>
+
+    <script>
+        // --- D3 CHART SETUP ---
+        const margin = { top: 30, right: 30, bottom: 50, left: 50 };
+        const defaultWidth = 400; // Default width for charts before knowing container size
+        const defaultHeight = 250; // Default height
+
+        // Helper function to get dimensions based on container
+        function getChartDimensions(containerId) {
+            const container = d3.select(`#${containerId}`);
+            if (container.node()) {
+                const bb = container.node().getBoundingClientRect();
+                const width = bb.width - margin.left - margin.right;
+                const height = bb.height - margin.top - margin.bottom;
+                return { width: Math.max(100, width), height: Math.max(100, height), container };
+            }
+            return { width: defaultWidth - margin.left - margin.right, height: defaultHeight - margin.top - margin.bottom, container: null };
+        }
+        
+        // --- Initial Token Data (Sample) ---
+        let baseTokenData = [
+            { token: "the", prob: 0.15 }, { token: "a", prob: 0.12 }, { token: "is", prob: 0.10 },
+            { token: "to", prob: 0.08 }, { token: "and", prob: 0.07 }, { token: "in", prob: 0.06 },
+            { token: "it", prob: 0.05 }, { token: "of", prob: 0.04 }, { token: "that", prob: 0.03 },
+            { token: "you", prob: 0.02 }
+        ];
+        // Ensure sum to 1 for some calcs, this is simplified
+        const sumProbs = baseTokenData.reduce((acc, t) => acc + t.prob, 0);
+        baseTokenData = baseTokenData.map(t => ({ ...t, prob: t.prob / sumProbs }));
+
+
+        // --- SECTION 1: CONFIGURATION PARAMETERS ---
+
+        // 1. Temperature Chart
+        const tempSlider = document.getElementById('temperature');
+        const tempValueSpan = document.getElementById('temperatureValue');
+        
+        function drawTempChart(temperature) {
+            const { width, height, container } = getChartDimensions('tempChart');
+            if (!container) return;
+            container.selectAll("*").remove(); // Clear previous chart
+
+            const svg = container.append("svg")
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom)
+                .append("g")
+                .attr("transform", `translate(${margin.left},${margin.top})`);
+
+            // Apply temperature to probabilities (simplified softmax-like effect)
+            let tempData = baseTokenData.map(d => ({
+                ...d,
+                prob: Math.exp(Math.log(d.prob + 1e-9) / temperature) // Add epsilon to avoid log(0)
+            }));
+            const sumExpProbs = tempData.reduce((acc, t) => acc + t.prob, 0);
+            tempData = tempData.map(d => ({ ...d, prob: d.prob / sumExpProbs })).slice(0, 10); // Show top 10
+
+            const x = d3.scaleBand().range([0, width]).padding(0.2).domain(tempData.map(d => d.token));
+            const y = d3.scaleLinear().range([height, 0]).domain([0, d3.max(tempData, d => d.prob)]);
+
+            svg.append("g").attr("transform", `translate(0,${height})`).call(d3.axisBottom(x)).selectAll("text").attr("class", "axis-text");
+            svg.append("g").call(d3.axisLeft(y).ticks(5).tickFormat(d3.format(".2f"))).selectAll("text").attr("class", "axis-text");
+            
+            svg.append("text") // X-axis label
+                .attr("text-anchor", "middle")
+                .attr("x", width / 2)
+                .attr("y", height + margin.bottom - 10)
+                .text("Tokens")
+                .attr("class", "axis-text" )
+                .style("font-weight", "500");
+
+            svg.append("text") // Y-axis label
+                .attr("text-anchor", "middle")
+                .attr("transform", "rotate(-90)")
+                .attr("y", -margin.left + 15)
+                .attr("x", -height / 2)
+                .text("Probability")
+                .attr("class", "axis-text")
+                .style("font-weight", "500");
+
+            svg.selectAll(".bar")
+                .data(tempData)
+                .enter().append("rect")
+                .attr("class", "token-bar")
+                .attr("x", d => x(d.token))
+                .attr("width", x.bandwidth())
+                .attr("y", d => y(d.prob))
+                .attr("height", d => height - y(d.prob));
+        }
+        tempSlider.oninput = () => {
+            tempValueSpan.textContent = tempSlider.value;
+            drawTempChart(parseFloat(tempSlider.value));
+        };
+
+        // 2. Top-p Chart
+        const topPSlider = document.getElementById('top_p');
+        const topPValueSpan = document.getElementById('topPValue');
+
+        function drawTopPChart(topP) {
+            const { width, height, container } = getChartDimensions('topPChart');
+            if (!container) return;
+            container.selectAll("*").remove();
+
+            const svg = container.append("svg")
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom)
+                .append("g")
+                .attr("transform", `translate(${margin.left},${margin.top})`);
+
+            let sortedData = [...baseTokenData].sort((a, b) => b.prob - a.prob);
+            let cumulativeProb = 0;
+            let nucleusData = [];
+            for (let d of sortedData) {
+                if (cumulativeProb < topP) {
+                    nucleusData.push({...d, inNucleus: true});
+                    cumulativeProb += d.prob;
+                } else {
+                    nucleusData.push({...d, inNucleus: false});
+                }
+            }
+            nucleusData = nucleusData.slice(0,10); // Show top 10 for viz
+
+            const x = d3.scaleBand().range([0, width]).padding(0.2).domain(nucleusData.map(d => d.token));
+            const y = d3.scaleLinear().range([height, 0]).domain([0, d3.max(nucleusData, d => d.prob)]);
+
+            svg.append("g").attr("transform", `translate(0,${height})`).call(d3.axisBottom(x)).selectAll("text").attr("class", "axis-text");
+            svg.append("g").call(d3.axisLeft(y).ticks(5).tickFormat(d3.format(".2f"))).selectAll("text").attr("class", "axis-text");
+            
+            svg.append("text").attr("text-anchor", "middle").attr("x", width / 2).attr("y", height + margin.bottom - 10).text("Tokens").attr("class", "axis-text" ).style("font-weight", "500");
+            svg.append("text").attr("text-anchor", "middle").attr("transform", "rotate(-90)").attr("y", -margin.left + 15).attr("x", -height / 2).text("Probability").attr("class", "axis-text").style("font-weight", "500");
+
+            svg.selectAll(".bar")
+                .data(nucleusData)
+                .enter().append("rect")
+                .attr("class", "token-bar")
+                .attr("x", d => x(d.token))
+                .attr("width", x.bandwidth())
+                .attr("y", d => y(d.prob))
+                .attr("height", d => height - y(d.prob))
+                .style("fill", d => d.inNucleus ? "#3b82f6" : "#9ca3af"); // Blue for in nucleus, gray otherwise
+        }
+        topPSlider.oninput = () => {
+            topPValueSpan.textContent = topPSlider.value;
+            drawTopPChart(parseFloat(topPSlider.value));
+        };
+
+        // 3. Top-k Chart
+        const topKSlider = document.getElementById('top_k');
+        const topKValueSpan = document.getElementById('topKValue');
+
+        function drawTopKChart(topK) {
+            const { width, height, container } = getChartDimensions('topKChart');
+            if (!container) return;
+            container.selectAll("*").remove();
+
+            const svg = container.append("svg")
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom)
+                .append("g")
+                .attr("transform", `translate(${margin.left},${margin.top})`);
+
+            let sortedData = [...baseTokenData].sort((a, b) => b.prob - a.prob);
+            let topKData = sortedData.map((d, i) => ({...d, inTopK: i < topK })).slice(0,10);
+
+            const x = d3.scaleBand().range([0, width]).padding(0.2).domain(topKData.map(d => d.token));
+            const y = d3.scaleLinear().range([height, 0]).domain([0, d3.max(topKData, d => d.prob)]);
+
+            svg.append("g").attr("transform", `translate(0,${height})`).call(d3.axisBottom(x)).selectAll("text").attr("class", "axis-text");
+            svg.append("g").call(d3.axisLeft(y).ticks(5).tickFormat(d3.format(".2f"))).selectAll("text").attr("class", "axis-text");
+
+            svg.append("text").attr("text-anchor", "middle").attr("x", width / 2).attr("y", height + margin.bottom - 10).text("Tokens").attr("class", "axis-text" ).style("font-weight", "500");
+            svg.append("text").attr("text-anchor", "middle").attr("transform", "rotate(-90)").attr("y", -margin.left + 15).attr("x", -height / 2).text("Probability").attr("class", "axis-text").style("font-weight", "500");
+
+            svg.selectAll(".bar")
+                .data(topKData)
+                .enter().append("rect")
+                .attr("class", "token-bar")
+                .attr("x", d => x(d.token))
+                .attr("width", x.bandwidth())
+                .attr("y", d => y(d.prob))
+                .attr("height", d => height - y(d.prob))
+                .style("fill", d => d.inTopK ? "#3b82f6" : "#9ca3af");
+        }
+        topKSlider.oninput = () => {
+            topKValueSpan.textContent = topKSlider.value;
+            drawTopKChart(parseInt(topKSlider.value));
+        };
+        
+        // 4. Max Tokens Chart & Preview
+        const maxTokensSlider = document.getElementById('max_tokens');
+        const maxTokensValueSpan = document.getElementById('maxTokensValue');
+        const maxTokensTextSpan = document.getElementById('maxTokensText');
+        const fullText = "The quick brown fox jumps over the lazy dog. This is a sample text to demonstrate how max tokens can affect the output length. If the limit is reached, the text will be truncated, showing only a portion of the potential full sentence or paragraph. This parameter is crucial for controlling response size and computational cost. Adjust the slider to see the effect in real-time on this preview text and the chart visualization which represents the allowed length.";
+        const approxTokensPerChar = 0.25; // Very rough estimate
+
+        function drawMaxTokensChart(maxTokens) {
+            const { width, height, container } = getChartDimensions('maxTokensChart');
+            if (!container) return;
+            container.selectAll("*").remove();
+
+            const svg = container.append("svg")
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom)
+                .append("g")
+                .attr("transform", `translate(${margin.left},${margin.top})`);
+            
+            const totalPossibleTokens = 500; // Arbitrary max for visualization context
+            const data = [
+                { type: "Allowed", value: maxTokens },
+                { type: "Remaining", value: Math.max(0, totalPossibleTokens - maxTokens) }
+            ];
+
+            const x = d3.scaleLinear().range([0, width]).domain([0, totalPossibleTokens]);
+            const y = d3.scaleBand().range([0, height / 3]).padding(0.1).domain(["Length"]); // Single bar
+
+            svg.append("g").attr("transform", `translate(0,${height / 3})`).call(d3.axisBottom(x).ticks(5)).selectAll("text").attr("class", "axis-text");
+            svg.append("text").attr("text-anchor", "middle").attr("x", width / 2).attr("y", height / 3 + margin.bottom - 20).text("Token Count").attr("class", "axis-text" ).style("font-weight", "500");
+
+            svg.selectAll(".length-bar-bg") // Background bar for total
+                .data(["Length"])
+                .enter().append("rect")
+                .attr("class", "length-bar-bg")
+                .attr("y", d => y(d))
+                .attr("height", y.bandwidth())
+                .attr("x", 0)
+                .attr("width", width)
+                .style("fill", "#e5e7eb"); // Light gray background
+
+            svg.selectAll(".length-bar")
+                .data([maxTokens])
+                .enter().append("rect")
+                .attr("class", "token-bar") // Use same class for consistent styling
+                .attr("y", d => y("Length"))
+                .attr("height", y.bandwidth())
+                .attr("x", 0)
+                .attr("width", d => x(d))
+                .style("fill", "#3b82f6");
+
+            svg.append("text")
+                .attr("x", x(maxTokens) + 5)
+                .attr("y", y("Length") + y.bandwidth() / 2)
+                .attr("dy", ".35em")
+                .attr("class", "axis-text")
+                .style("fill", "#1f2937")
+                .text(maxTokens + " tokens");
+
+            // Update text preview
+            const approxChars = maxTokens / approxTokensPerChar;
+            maxTokensTextSpan.textContent = fullText.substring(0, approxChars) + (fullText.length > approxChars ? "..." : "");
+        }
+        maxTokensSlider.oninput = () => {
+            maxTokensValueSpan.textContent = maxTokensSlider.value;
+            drawMaxTokensChart(parseInt(maxTokensSlider.value));
+        };
+
+        // 5. Frequency Penalty Chart
+        const freqPenaltySlider = document.getElementById('frequency_penalty');
+        const freqPenaltyValueSpan = document.getElementById('freqPenaltyValue');
+        let initialFreqData = JSON.parse(JSON.stringify(baseTokenData.slice(0,5).map(d => ({...d, initialProb: d.prob})))); // Take a few for demo
+
+        function drawFreqPenaltyChart(penalty) {
+            const { width, height, container } = getChartDimensions('freqPenaltyChart');
+            if (!container) return;
+            container.selectAll("*").remove();
+
+            const svg = container.append("svg")
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom)
+                .append("g")
+                .attr("transform", `translate(${margin.left},${margin.top})`);
+
+            // Simulate penalty: higher initial prob tokens are penalized more
+            // This is a very simplified simulation
+            let penalizedData = initialFreqData.map(d => {
+                let newProb = d.initialProb - (penalty * (d.initialProb / d3.max(initialFreqData, id => id.initialProb)) * 0.05); // Penalty effect
+                return { ...d, prob: Math.max(0.001, newProb) }; // Ensure prob doesn't go to 0 or negative
+            });
+
+            const x = d3.scaleBand().range([0, width]).padding(0.2).domain(penalizedData.map(d => d.token));
+            const y = d3.scaleLinear().range([height, 0]).domain([0, d3.max(initialFreqData, d => d.initialProb) * 1.1]); // Use initial max for stable y-axis
+
+            svg.append("g").attr("transform", `translate(0,${height})`).call(d3.axisBottom(x)).selectAll("text").attr("class", "axis-text");
+            svg.append("g").call(d3.axisLeft(y).ticks(5).tickFormat(d3.format(".2f"))).selectAll("text").attr("class", "axis-text");
+
+            svg.append("text").attr("text-anchor", "middle").attr("x", width / 2).attr("y", height + margin.bottom - 10).text("Tokens").attr("class", "axis-text" ).style("font-weight", "500");
+            svg.append("text").attr("text-anchor", "middle").attr("transform", "rotate(-90)").attr("y", -margin.left + 15).attr("x", -height / 2).text("Adjusted Probability").attr("class", "axis-text").style("font-weight", "500");
+
+            svg.selectAll(".bar")
+                .data(penalizedData)
+                .enter().append("rect")
+                .attr("class", "token-bar")
+                .attr("x", d => x(d.token))
+                .attr("width", x.bandwidth())
+                .attr("y", d => y(d.prob))
+                .attr("height", d => height - y(d.prob));
+        }
+        freqPenaltySlider.oninput = () => {
+            freqPenaltyValueSpan.textContent = freqPenaltySlider.value;
+            drawFreqPenaltyChart(parseFloat(freqPenaltySlider.value));
+        };
+
+
+        // --- SECTION 2: EVALUATION METRICS ---
+        // Helper for simple bar charts
+        function drawBarChart(containerId, data, xLabel = "Category", yLabel = "Score", yDomain = null) {
+            const { width, height, container } = getChartDimensions(containerId);
+            if (!container) return;
+            container.selectAll("*").remove();
+
+            const svg = container.append("svg")
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom)
+                .append("g")
+                .attr("transform", `translate(${margin.left},${margin.top})`);
+
+            const x = d3.scaleBand().range([0, width]).padding(0.3).domain(data.map(d => d.name));
+            const yMax = yDomain ? yDomain[1] : d3.max(data, d => d.value);
+            const yMin = yDomain ? yDomain[0] : 0;
+            const y = d3.scaleLinear().range([height, 0]).domain([yMin, yMax]);
+
+            svg.append("g").attr("transform", `translate(0,${height})`).call(d3.axisBottom(x)).selectAll("text").attr("class", "axis-text").style("text-anchor", "middle");
+            svg.append("g").call(d3.axisLeft(y).ticks(5)).selectAll("text").attr("class", "axis-text");
+
+            svg.append("text").attr("text-anchor", "middle").attr("x", width / 2).attr("y", height + margin.bottom - 10).text(xLabel).attr("class", "axis-text").style("font-weight", "500");
+            svg.append("text").attr("text-anchor", "middle").attr("transform", "rotate(-90)").attr("y", -margin.left + 15).attr("x", -height / 2).text(yLabel).attr("class", "axis-text").style("font-weight", "500");
+
+            svg.selectAll(".bar")
+                .data(data)
+                .enter().append("rect")
+                .attr("class", "token-bar")
+                .attr("x", d => x(d.name))
+                .attr("width", x.bandwidth())
+                .attr("y", d => y(Math.max(0, d.value))) // Ensure bar starts at 0 if values can be negative
+                .attr("height", d => Math.abs(y(d.value) - y(0))); // Correct height for negative values
+        }
+
+        // Perplexity Data & Chart
+        const perplexityData = [ { name: "Model A", value: 35 }, { name: "Model B", value: 22 }, { name: "Model C", value: 50 }];
+        drawBarChart('perplexityChart', perplexityData, "Model", "Perplexity Score", [0, 60]);
+
+        // ROUGE Data & Chart
+        const rougeData = [ { name: "Summary 1", value: 0.45 }, { name: "Summary 2", value: 0.62 }, { name: "Summary 3", value: 0.55 }];
+        drawBarChart('rougeChart', rougeData, "Summary Version", "ROUGE-L Score", [0, 1]);
+
+        // BLEU Data & Chart
+        const bleuData = [ { name: "Translation Alpha", value: 28 }, { name: "Translation Beta", value: 35 }, { name: "Translation Gamma", value: 31 }];
+        drawBarChart('bleuChart', bleuData, "Translation System", "BLEU Score", [0, 40]);
+        
+        // BERTScore Data & Chart
+        const bertScoreData = [ { name: "Output X", value: 0.88 }, { name: "Output Y", value: 0.92 }, { name: "Output Z", value: 0.85 }];
+        drawBarChart('bertScoreChart', bertScoreData, "Generated Output", "BERTScore (F1)", [0.8, 1]);
+
+        // Hallucination Rate Data & Chart
+        const hallucinationData = [ { name: "Model A (Base)", value: 15 }, { name: "Model B (Tuned)", value: 6 }];
+        drawBarChart('hallucinationChart', hallucinationData, "Model", "Hallucination %", [0, 20]);
+
+        // --- SECTION 3: BUSINESS-ORIENTED METRICS ---
+        // Latency Data & Chart
+        const latencyData = [ { name: "Vendor X", value: 800 }, { name: "Vendor Y", value: 550 }, { name: "Vendor Z", value: 1200 }];
+        drawBarChart('latencyChart', latencyData, "LLM Vendor", "Avg. Latency (ms)", [0, 1500]);
+
+        // Cost Data & Chart
+        const costData = [ { name: "OpenAI GPT-4o", value: 5.00 }, { name: "OpenAI GPT-3.5-T", value: 0.50 }, { name: "Open Source (Self-Hosted)", value: 0.10 }]; // Cost per 1M tokens (example)
+        drawBarChart('costChart', costData, "Model/Deployment", "Cost per 1M Tokens ($)", [0, 6]);
+
+
+        // --- Initial chart draws on page load ---
+        function initializeCharts() {
+            // Configuration charts
+            drawTempChart(parseFloat(tempSlider.value));
+            drawTopPChart(parseFloat(topPSlider.value));
+            drawTopKChart(parseInt(topKSlider.value));
+            drawMaxTokensChart(parseInt(maxTokensSlider.value));
+            drawFreqPenaltyChart(parseFloat(freqPenaltySlider.value));
+
+            // Evaluation charts (already drawn above, but good practice if they were dynamic)
+            drawBarChart('perplexityChart', perplexityData, "Model", "Perplexity Score", [0, 60]);
+            drawBarChart('rougeChart', rougeData, "Summary Version", "ROUGE-L Score", [0, 1]);
+            drawBarChart('bleuChart', bleuData, "Translation System", "BLEU Score", [0, 40]);
+            drawBarChart('bertScoreChart', bertScoreData, "Generated Output", "BERTScore (F1)", [0.8, 1]);
+            drawBarChart('hallucinationChart', hallucinationData, "Model", "Hallucination %", [0, 20]);
+
+            // Business charts
+            drawBarChart('latencyChart', latencyData, "LLM Vendor", "Avg. Latency (ms)", [0, 1500]);
+            drawBarChart('costChart', costData, "Model/Deployment", "Cost per 1M Tokens ($)", [0, 6]);
+        }
+        
+        // Debounce function for resize
+        function debounce(func, wait, immediate) {
+            var timeout;
+            return function() {
+                var context = this, args = arguments;
+                var later = function() {
+                    timeout = null;
+                    if (!immediate) func.apply(context, args);
+                };
+                var callNow = immediate && !timeout;
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+                if (callNow) func.apply(context, args);
+            };
+        };
+
+        // Redraw charts on window resize
+        const debouncedResize = debounce(initializeCharts, 250);
+        window.addEventListener('resize', debouncedResize);
+
+        // Initial call
+        document.addEventListener('DOMContentLoaded', initializeCharts);
+
+    </script>
+</body>
+</html>

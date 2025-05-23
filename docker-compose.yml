@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  hugo-dev:
+    build:
+      context: . # Build from the Dockerfile in the current directory
+      dockerfile: Dockerfile
+    ports:
+      - "1313:1313" # Map host port 1313 to container port 1313
+    volumes:
+      # Mount your local project directory into the container's /app directory
+      # This enables live reloading: changes on your host machine will reflect in the container
+      - .:/app
+    environment:
+      # Optional: Set environment variables if your Hugo site needs them (e.g., API keys)
+      # - MY_ENV_VAR=my_value
+      # If you have Google Analytics enabled, you might need to ensure it's configured
+      # correctly in config/_default/params.yaml or disable it during local dev if it causes issues.
+      # The Dockerfile installs the extended version, which should handle SCSS.
+      - HUGO_ENVIRONMENT=development # Set Hugo environment to development
+    command: ["hugo", "serve", "--bind", "0.0.0.0", "--port", "1313", "--disableFastRender", "--source", ".", "--buildDrafts"]
+    # Use restart: unless-stopped to keep the container running if it exits unexpectedly
+    restart: unless-stopped

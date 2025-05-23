@@ -30,14 +30,12 @@ content:
       tag: '*'
     - name: ML
       tag: ML
-    - name: Gen AI
-      tag: GenAI
-    - name: Federated Learning
-      tag: FL
-    - name: DevOps
-      tag: DevOps
     - name: NLP
       tag: NLP
+    - name: GenAI
+      tag: GenAI
+    - name: DevOps
+      tag: DevOps
 
 design:
   columns: '1'

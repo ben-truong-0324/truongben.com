@@ -35,3 +35,6 @@ hugo serve
 
 chmod +x gitpush.sh
 ./gitpush.sh
+
+docker compose up --build #build hugo for local dev with docker
+localhost:1313

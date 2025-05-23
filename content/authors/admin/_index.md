@@ -6,20 +6,20 @@ title: Ben Truong
 superuser: true
 
 # Role/position
-role: ML DevOps & LLM Research
+role: GenAI Engineer
 
 # Status emoji
 status:
   icon: ☕
 
 # Short bio (displayed in user profile at end of posts)
-bio: ML Engineer with a background in NLP, operational analytics, and public-sector innovation. Passionate about GenAI and Federated ML at scale.
+bio: "I specialize in deploying ML/GenAI applications from on-prem clusters to enterprise cloud. Chat with me anytime on how you can get business ROI from task automation, documentation & summarization, personalized CRM, and predictive analytics."
 
 # Interests (optional display section)
 interests:
-- ML Analytics Pipeline
-- NLP on Federated Learning
-- Entrepreneurship & Nonprofits
+- GenAI applications
+- ML for decision making
+- Entrepreneurship & nonprofits
 
 # Education (optional section that appears in widgets or sidebar)
 education:
