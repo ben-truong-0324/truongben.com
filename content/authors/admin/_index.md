@@ -6,20 +6,19 @@ title: Ben Truong
 superuser: true
 
 # Role/position
-role: GenAI Engineer
+role: ML Engineer
 
 # Status emoji
 status:
   icon: ☕
 
 # Short bio (displayed in user profile at end of posts)
-bio: "I specialize in deploying ML/GenAI applications from on-prem clusters to enterprise cloud. Chat with me anytime on how you can get business ROI from task automation, documentation & summarization, personalized CRM, and predictive analytics."
+bio: "I build ML/GenAI apps for the cloud and private clusters."
 
 # Interests (optional display section)
 interests:
-- GenAI applications
-- ML for decision making
-- Entrepreneurship & nonprofits
+- GenAI apps
+- Pipeline Store design
 
 # Education (optional section that appears in widgets or sidebar)
 education:
@@ -52,10 +51,10 @@ social:
 # Enter email to use Gravatar or enable contact widget
 email: ktruong43@gatech.edu
 ---
-I am a ML engineer with DevOps experience and cross-disciplinary background in NLP, public-sector technology, and operational analytics. I'm currently pursuing my M.S. in Computer Science (ML track) at Georgia Tech, while also leading ML analytics products and GenAI application pipelines in civic tech and nonprofit spaces.
+I build ML/GenAI apps coming from a background working with Traefik, K8s, and Kafka. I'm currently pursuing my M.S. in Computer Science (ML track) at Georgia Tech.
 
-My recent work includes a ML-driven dashboard for financial insights on K8s, a RL model for stock trading, and a scalable LLM evaluation pipelines for hospital coding. I bring over three years of leadership experience in enterprise operations and 8 years in military Signal operations. My focus is on reproducibility and documentation for joint development between business and technical teams.
+My recent work includes an image-to-3d-print app using text-gen and diffusion models, an adapted transformer model for stock trading, and a LLM-based app for medial diagnosis coding. I also have three years of leadership experience in enterprise operations and 8 years in military Signal operations. My personal focus/direction is ROI, reproducibility, and cross-functional communication.
 
-Outside of work, I’m passionate about open-source tools, community mentoring, and ML on consumer hardware.
+Outside of work, I’m passionate about mentoring and managing the ever-expanding homelab.
 
 {{< icon name="download" pack="fas" >}} {{< staticref "uploads/resume.pdf" "newtab" >}}Download{{< /staticref >}} my resumé as a PDF.

@@ -25,6 +25,22 @@ date_format: Jan 2006
 #   Leave other parameters empty if not required.
 #   Begin multi-line descriptions with YAML's `|2-` multi-line prefix.
 item:
+  - certificate_url: https://learn.nvidia.com/certificates?id=bKFemKVQQ-S-8p6ijXQdrw
+    date_start: '2025-06-10'
+    date_end: ''
+    description: NVIDIA Certificate for Rapid Application Development with Large Language Models (LLMs).
+    organization: NVIDIA
+    organization_url: https://www.nvidia.com
+    title: Rapid Application Development with Large Language Models (LLMs)
+    url: ''
+  - certificate_url: https://learn.nvidia.com/certificates?id=nfbTCGSFTPGe0Mhm0xtyTA
+    date_start: '2025-06-04'
+    date_end: ''
+    description: NVIDIA Certificate for Building LLM Applications With Prompt Engineering.
+    organization: NVIDIA
+    organization_url: https://www.nvidia.com
+    title: Building LLM Applications With Prompt Engineering
+    url: ''
   - certificate_url: https://verify.skilljar.com/c/ouh4fnqycd83
     date_start: '2024-12-21'
     date_end: ''
