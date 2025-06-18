@@ -1,5 +1,5 @@
 ---
-title: "deploying-your-own-google-colab"
+title: "Deploying your own Google colab from home!"
 subtitle: ""
 date: 2025-06-17T18:29:54-0700
 draft: false 
@@ -10,17 +10,9 @@ categories:
   - blog
 authors:
   - admin # Default author, change if needed (refers to content/authors/admin/_index.md)
-summary: ""
+summary: "Deploying Your Own Private and Secure Jupyter Environment with Docker, Traefik, and Tailscale"
 ---
 
-# deploying-your-own-google-colab
-
-
-
----
-## Custom HTML Content Section
-
-The following content is loaded from 'deploying-your-own-google-colab':
 {{< rawhtml "deploying-your-own-google-colab" >}}
 
 ---

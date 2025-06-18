@@ -21,7 +21,6 @@ summary: ""
 ---
 ## Custom HTML Content Section
 
-The following content is loaded from 're-logits':
 {{< rawhtml "re-logits" >}}
 
 ---

@@ -1,0 +1,71 @@
+<h1>About Logits in Neural Networks</h1>
+
+<p>I used to be afaird of logits. What does it even mean? I thought ML models spits out labels or numbers. The concept was both scary and confusing to appoarch for me for the longest time. As a visual learner, I eventually came upon a way to help wrap my head around what logits are, and by extension, CE loss, for neural networks. This blog post thus documents my own way to understanding logits - and hopefully, would also be of use to you!</p>
+
+<h2>What Exactly Are Logits?</h2>
+
+<p>In the context of classification tasks, a neural network's final layer produces raw, unnormalized scores for each class. These scores are what we call <strong>logits</strong>. Think of a logit as the model's "confidence" that a given input belongs to a particular class. A higher logit value for a class means the model is more confident in that class being the correct one.</p>
+
+<p>However, these raw logit values have a couple of limitations:</p>
+<ul>
+    <li>They are not easily interpretable. A logit of 2.5 doesn't immediately tell you the probability of that class.</li>
+    <li>They can be any real number, from negative infinity to positive infinity. This makes it difficult to compare them across different models or even different outputs from the same model.</li>
+</ul>
+
+<h2>Logits in Binary and Multinomial Classification</h2>
+
+<p>The concept of logits is central to both binary and multinomial classification problems:</p>
+
+<ul>
+    <li>In <strong>binary classification</strong>, the model typically outputs a single logit. A positive logit suggests one class, while a negative logit suggests the other.</li>
+    <li>In <strong>multinomial classification</strong>, the model outputs a vector of logits, with one logit for each possible class. The class with the highest logit is the model's prediction.</li>
+</ul>
+
+<h2>From Logits to Probabilities: The Softmax Function</h2>
+
+<p>To make logits more interpretable, we need to convert them into probabilities. This is where the <strong>softmax function</strong> comes in. The softmax function takes the vector of logits and transforms it into a probability distribution, where:</p>
+
+<ul>
+    <li>Each value is between 0 and 1.</li>
+    <li>The sum of all values is equal to 1.</li>
+</ul>
+
+<p>Here's how the softmax function is calculated for a logit vector <code>z</code>:</p>
+
+<pre><code>
+softmax(z_i) = exp(z_i) / sum(exp(z_j)) for all j
+</code></pre>
+
+<p>This conversion is crucial because it allows us to see the model's predicted probability for each class.</p>
+
+<h2>Calculating the Loss: Log and Negative Log-Likelihood</h2>
+
+<p>Now that we have probabilities, we can measure how well our model is performing. This is done by calculating the <strong>loss</strong>, which is a measure of the difference between the predicted probabilities and the actual labels. In classification tasks, we often use the <strong>cross-entropy loss</strong>, which is derived from the negative log-likelihood.</p>
+
+<p>Here's the process:</p>
+<ol>
+    <li><strong>Take the log of the softmax output:</strong> This gives us the log probabilities.</li>
+    <li><strong>Apply the negative log-likelihood:</strong> We take the negative of the log probability of the correct class. This value is our loss. A lower loss indicates a better model performance.</li>
+</ol>
+
+<p>The reason we use the negative log is that we want to maximize the probability of the correct class. Taking the negative of the log turns this into a minimization problem, which is easier to work with in the context of optimization algorithms like gradient descent.</p>
+
+<h2>Visualizing the Changes: Epoch 5 vs. Epoch 45</h2>
+
+<p>To see how these values evolve during training, let's look at a couple of snapshots. Here are two images showing the values of the logit, softmax, and loss for both the training and validation sets at different stages of training.</p>
+
+<h3>Epoch 5</h3>
+<p>In the early stages of training, the model is still learning. The logits are likely to be small, and the softmax probabilities will be more evenly distributed. The loss will be relatively high.</p>
+
+<img src="epoch_5.png" alt="Epoch 5 Training vs. Validation" style="width:100%;">
+
+<h3>Epoch 45</h3>
+<p>After more training, the model has learned to distinguish between the classes better. The logits for the correct classes will be higher, and the softmax probabilities will be more confident. The loss will be significantly lower.</p>
+
+<img src="epoch_45.png" alt="Epoch 45 Training vs. Validation" style="width:100%;">
+
+<h2>Conclusion</h2>
+
+<p>Understanding logits is key to understanding how classification models work. They are the raw output of the model, which, when passed through the softmax function, can be interpreted as probabilities. By then calculating the negative log-likelihood, we get a loss value that we can use to train our model. As we've seen, the values of the logits, softmax probabilities, and loss all change as the model learns, reflecting its increasing confidence and accuracy.</p>
+
+<p>We hope this post has helped you better understand the role of logits in neural networks. Thanks for reading!</p>
