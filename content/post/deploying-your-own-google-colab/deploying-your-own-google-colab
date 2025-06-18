@@ -25,41 +25,40 @@
 
 <p>Let's dive into the core of our setup, the <code>docker-compose.yml</code> file. This file will define and configure our three services.</p>
 
-<pre><code>v
-    
+<pre><code>
 services:
-traefik:
-    image: "traefik:v2.10"
-    container_name: "traefik"
-    command:
-        - "--api.insecure=true"
-        - "--providers.docker=true"
-        - "--providers.docker.exposedbydefault=false"
-        - "--entrypoints.web.address=:80"
-    ports:
-        - "8080:8080" # Traefik Dashboard (for debugging, you can access it at localhost:8080 after spun up)
-    volumes:
-        - "/var/run/docker.sock:/var/run/docker.sock:ro" #mount a virtual drive onto your hard drive 
-    networks:
-        - proxy_traefik # Docker compose will now create a mini-cluster (or LAN) with the name of "proxy_traefik"
+    traefik:
+        image: "traefik:v2.10"
+        container_name: "traefik"
+        command:
+            - "--api.insecure=true"
+            - "--providers.docker=true"
+            - "--providers.docker.exposedbydefault=false"
+            - "--entrypoints.web.address=:80"
+        ports:
+            - "8080:8080" # Traefik Dashboard (for debugging, you can access it at localhost:8080 after spun up)
+        volumes:
+            - "/var/run/docker.sock:/var/run/docker.sock:ro" #mount a virtual drive onto your hard drive 
+        networks:
+            - proxy_traefik # Docker compose will now create a mini-cluster (or LAN) with the name of "proxy_traefik"
 
-#now that Docker has Traefik spun up in its own Docker "LAN" of proxy_traefik, we spin up the Jupyter component and add it to the "LAN"
-jupyter:
-    image: "jupyter/scipy-notebook:latest"
-    container_name: "jupyter"
-    command: ["start.sh", "jupyter", "lab", "--NotebookApp.token='jupyter'"] #prompted password is jupyter at landing page
-    environment:
-        - JUPYTER_ENABLE_LAB=yes
-    labels: #by adding these labels, we are telling Docker to inform Traefik that this component is to join the "LAN" designated in networks below and that Traefik will be the reverse proxy routing traffic to it 
-        - "traefik.enable=true"
-        - "traefik.http.routers.jupyter.rule=Host(`your-home-machine.tail.ts.net`)" # Use your Tailscale magicDNS domain name 
-        # when you are routed to your home machine from within the VPN, the request is resolved by your computer towards Docker desktop which again reroute you to the Traefik service to attempt to resolve. As Traefik kept track that the Jupyter server told it to route any `your-home-machine.tail.ts.net` traffic towards itself, it will then reroute using the docker compose "LAN" internal IP address towards Jupyter. This finally connects us to the Jupyter running in a Docker composed container in the desktop.
-        # by the way, note that we can also tell Traefik to resolve for Host(`your-home-machine.tail.ts.net`) && PathPrefix(`/app-slug`) towards your own selfhosted app! Unfortunately, some apps may bug out with static assets referencing with this approach so be mindful.
-        - "traefik.http.routers.jupyter.entrypoints=websecure" #we tell Traefik to redirect to https for any access repquest
-        - "traefik.http.services.jupyter.loadbalancer.server.port=8888" #we tell Traefik to LB towards port 8888 of the container which is Jupyter's access port by default
-    networks:
-        - proxy
-    restart: unless-stopped
+    #now that Docker has Traefik spun up in its own Docker "LAN" of proxy_traefik, we spin up the Jupyter component and add it to the "LAN"
+    jupyter:
+        image: "jupyter/scipy-notebook:latest"
+        container_name: "jupyter"
+        command: ["start.sh", "jupyter", "lab", "--NotebookApp.token='jupyter'"] #prompted password is jupyter at landing page
+        environment:
+            - JUPYTER_ENABLE_LAB=yes
+        labels: #by adding these labels, we are telling Docker to inform Traefik that this component is to join the "LAN" designated in networks below and that Traefik will be the reverse proxy routing traffic to it 
+            - "traefik.enable=true"
+            - "traefik.http.routers.jupyter.rule=Host(`your-home-machine.tail.ts.net`)" # Use your Tailscale magicDNS domain name 
+            # when you are routed to your home machine from within the VPN, the request is resolved by your computer towards Docker desktop which again reroute you to the Traefik service to attempt to resolve. As Traefik kept track that the Jupyter server told it to route any `your-home-machine.tail.ts.net` traffic towards itself, it will then reroute using the docker compose "LAN" internal IP address towards Jupyter. This finally connects us to the Jupyter running in a Docker composed container in the desktop.
+            # by the way, note that we can also tell Traefik to resolve for Host(`your-home-machine.tail.ts.net`) && PathPrefix(`/app-slug`) towards your own selfhosted app! Unfortunately, some apps may bug out with static assets referencing with this approach so be mindful.
+            - "traefik.http.routers.jupyter.entrypoints=websecure" #we tell Traefik to redirect to https for any access repquest
+            - "traefik.http.services.jupyter.loadbalancer.server.port=8888" #we tell Traefik to LB towards port 8888 of the container which is Jupyter's access port by default
+        networks:
+            - proxy
+        restart: unless-stopped
 
 networks:
     proxy_traefik:
