@@ -126,4 +126,4 @@ networks:
 <p>You should be greeted by the Jupyter Lab interface, accessible only from devices on your Tailscale network. The only bottleneck now is the latency and bandwidth your ISP facilitates for your home Internet!</p>
 
 <h2>TL;DR</h2>
-<p>Use Tailscale - it's free, it works, and it's robust. Tell your Traefik to route from Tailscale's provided url. Copy the provided docker-compose for a quick spin up.</p>
+<p>Use Tailscale - it's free, it works, and it's robust. Tell your Traefik to route from Tailscale's provided url. Copy/paste the docker-compose for a quick spin up. Have fun!</p>
