@@ -2,7 +2,7 @@
 title: "deploying-your-own-google-colab"
 subtitle: ""
 date: 2025-06-17T18:29:54-0700
-draft: true 
+draft: false 
 tags:
   - tech
   - devops
