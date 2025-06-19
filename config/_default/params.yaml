@@ -6,9 +6,9 @@
 # Appearance
 
 appearance:
-  # theme_day: custom
-  # theme_night: custom
-  mode: light
+  theme_day: custom
+  theme_night: custom
+  mode: day
   font: native
   font_size: M
 
@@ -38,9 +38,9 @@ header:
     align: r
     show_logo: false
     show_language: false
-    show_theme_chooser: true
+    # show_theme_chooser: true
     show_day_night: true
-    show_search: false
+    show_search: true
     highlight_active_link: false
 
 footer:
