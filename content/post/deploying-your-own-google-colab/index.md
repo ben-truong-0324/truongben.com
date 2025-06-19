@@ -1,5 +1,5 @@
 ---
-title: "Deploying your own Google colab from home!"
+title: "Deploying your own Google colab from home"
 subtitle: ""
 date: 2025-06-17T18:29:54-0700
 draft: false 

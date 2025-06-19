@@ -1,8 +1,8 @@
 
 
-<p>I ran into a problem where I have a great GPU at home but I do my model finetuning from my laptop too often. In this blog post, I will walkthrough my setup to solve this with Docker, Traefik, Jupyter, and Tailscale.</p>
+<p>Recently, I found myself doing ML projects from my laptop while my GPU was wasting away at home. In this blog post, I will walkthrough my setup to solve this with Docker, Traefik, Jupyter, and Tailscale.</p>
 
-<p>This setup ensures that I can do finetuning (or inference or any other FLOP-intensive tasks) by turning my home computer into a VPS serving a Jupyter webapp. We have 2 security measures: encryption with https protocol and attack-surface-reduction with VPN.</p>
+<p>The main gain is the ability to do finetuning (or any other FLOP-intensive DL tasks) using my home computer into a VPS serving a Jupyter webapp - and by extension, any other computers I owe. Even that old laptop I bought 10 years ago. We have 2 security measures: encryption with https protocol and attack-surface-reduction with VPN.</p>
 
 <h2>Prerequisites</h2>
 

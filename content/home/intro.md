@@ -21,6 +21,6 @@ author: admin
 ---
 
 👋 Hi there! I build ML apps for both the cloud and private clusters - hit me up if your team is deploying a VPC with multi-agentic workflows and NLP+vision tasks.  
-{style="font-size: 1.2rem; background: #FFB76B; background: linear-gradient(to right,  #FF7518 0%, #FF5F1F 50%, # #FF5733 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;"}
+{style="font-size: 1.2rem;}
 
 Check out my [resumé](/about/) and projects below ☕
