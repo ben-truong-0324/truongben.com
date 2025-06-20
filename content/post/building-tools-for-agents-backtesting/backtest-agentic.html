@@ -1,0 +1,80 @@
+<h2>Do you even beat LIBOR bro?</h2>
+<p>
+  Imagine a while loop that spins up an AI agent with this system prompt: "Review LessonsLearned.md and build a stock trading ETL pipeline and model setup that would be profitable. If you fail, note down your findings in LessonsLearned.md" Let's call it the Vibe Trader. We're not just asking the reasoning AI to run a script; we're asking it to reason, build, evaluate, do AAR, and peacefully fire itself until Alpha is reached (even then, it's still fired). This is FLOPS-driven peak capitalism - exactly what linear algebra was invented for.
+</p>
+<p>
+  But how do we build the playground for such an agent? Giving it carte blanche to write code from scratch leads to an abundance of complexities. Trusting LLM to self-evaluate on future leakage in its ETL is foolhardy - but let's assume that's been controlled for. A more robust approach is to use Agent tool use so that the agent's reasoning is channeled into the most critical AI task: <strong>generate and test</strong>.
+</p>
+
+<hr>
+
+<h2>The Tool: run_backtest Runnable</h2>
+<p>
+  To do its job, our agent needs a tool. We provide it this single endpoint: <code>run_backtest(etl_v, model_v, trade_strat_v, X_test = X_test)</code>. Setting it up as part of the agent's tool kit as a Runnable is simple with LCEL. When the agent calls this function with a chosen configuration, the system runs a rigorous backtest on a held-out test partition of our historical data - ruthlessly devoid of any hallucination. The function then returns a structured JSON object containing the results. 
+</p>
+<pre><code># The agent gets this output...
+
+{
+  "all_time_sharpe": 1.2,
+  "all_time_returns_pct": 35.5,
+  "rolling_sharpe_data": [...],
+  "rolling_win_rate_data": [...],
+  "max_drawdown_pct": -15.2,
+  "recent_trades": [
+    { "ticker": "AAPL", "pnl": 150.2, "signal_strength": 0.88 },
+    { "ticker": "GOOG", "pnl": -50.1, "signal_strength": 0.51 },
+    ...
+  ]
+}
+</code></pre>
+
+<h2>The Agent's Decision Framework: Beyond a Single Number</h2>
+<p>
+  Now for the agent's core task: interpreting these results. We would want our agent to be not too excited over all-time returns - given possible (read: recent) black swan volatility... Our sophisticated agent knows that's not enough. It needs to evaluate the <em>quality and robustness</em> of the performance using a multi-faceted approach.
+</p>
+
+<h3>1. Is it profitable at all? (The Baseline Check)</h3>
+<p>The agent first looks at <code>all_time_sharpe</code> and <code>all_time_returns_pct</code>. If these are negative or near zero, the strategy is likely a non-starter. But this is just a coarse filter.</p>
+
+<h3>2. Is it <i>consistently</i> profitable? (The Robustness Check)</h3>
+<p>This is where rolling metrics are critical. A strategy might have a great overall Sharpe ratio simply because it got lucky on one or two massive trades, while bleeding money the rest of the time. This strategy is fragile and unlikely to generalize.</p>
+<p>Devoid of a real investment principle system, the quant-driven agent must at least evaluate for Sharpe.</p>
+
+<div style="margin: 2rem 0;">
+    <img src="backtest1.png" alt="A backtest showing a high all-time Sharpe ratio but a very volatile and often negative rolling Sharpe ratio." style="width:100%; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+    <p><small>This strategy looks good on paper, but its rolling Sharpe ratio and rolling win rate shows there are some periods of loses. What underlies this? How can this be incorporated into LessonsLearned.md?</small></p>
+</div>
+
+
+<h3>3. Is it still working <i>now</i>? (The Recency Check)</h3>
+<p>Markets evolve. A strategy that worked wonders two years ago might have lost all alpha today. The lending/payback cycles may have shortened compared to 2 decades ago. Market downturn cycles may have shortened with put options winners reinvesting their gains. The agent must inspect the <code>recent_trades</code> and the tail end of the rolling performance charts. Is there a sharp downturn? Does it seem like the "alpha" has decayed? This prevents deploying a strategy that is already failing.</p>
+
+<div style="margin: 2rem 0;">
+    <img src="backtest2.png" alt="A backtest showing a stable and consistently positive rolling Sharpe ratio." style="width:100%; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+    <p><small>What is the proper Prompt Engineering to conduct here to drive proper LessonsLearned insights to be derived?</small></p>
+</div>
+
+<hr>
+
+<h2>The Last LangGraph Node: Exit Strategy</h2>
+<p>
+  After weighing all this evidence, the agent makes a final decision by calling one of three conclusion functions:
+</p>
+<ul>
+  <li>
+    <strong><code>GiveUp(reason="...")</code></strong>: The agent has hit its max_attempt count. The runway is dried up.
+  </li>
+  <li>
+    <strong><code>IterateAndPivot(suggestion="...")</code></strong>: The agent updates LessonsLearned.md at the end with whether introducing a new data source in the ETL was helpful to get it to beat LIBOR or the market. For example: "Strategy branch 1 shows a stable edge and beat market returns until the last quarter. The underlying signals may be decaying too slowly. Suggestion: Re-try branch 1 with the same ETL but decrease the lookback window."
+  </li>
+  <li>
+    <strong><code>AnnounceMeNextRenTech(confidence_score=0.95)</code></strong>: This is the home run - but how long will this alpha last? Will you give it .05 of your port while alpha is still fresh, discard and call it a day? Do you want to keep spinning up agents to iteratively derive "fresh alpha" ad infinitum?
+  </li>
+</ul>
+
+<p>
+  My POV is that LLMs are stochastic parrots. They perform much better than RNN, LSTM, apes, and others - in specific domains. So whatever hidden semantic pattern it is that is present in the combined universere of transcribed token types - it can and will leverage. Words, pixels, wavelength... many things can be encoded. However, not everything can be one-hot into UTF. Not to mention, a purely quant approach has its own biases.
+  </p>
+<p>
+There is no free lunch.
+</p>

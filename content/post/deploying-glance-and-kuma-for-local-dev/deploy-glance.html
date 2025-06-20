@@ -1,0 +1,29 @@
+<h2>The Problem: The Bookmark Jungle</h2>
+<p>
+  If you're a developer or run a homelab, you probably don't want to waste time remembering all the different ports and urls to each app. Bookmarks work, but they're not well visualized. They also don't provide adjacent info such as uptime or current availability at a glance. For dev work for teams, bookmarks don't scale.
+</p>
+
+<h2>The Solution: Glance and Kuma in Tailscale</h2>
+<p>
+  Let's deploy a simple, secure, and centralized dashboard in your VPC (yes, a suite of apps and endpoints exposed in a VPN is a VPC.) 
+</p>
+<ul>
+  <li><strong>Glance</strong>: A lightweight, self-hosted dashboard that runs on Golang and it's IaC: just edit YAML files for your webpages.</li>
+  <li><strong>Uptime Kuma</strong>: It's an open-source monitoring tool. We'll point it at our services to see at-a-glance if they are online.</li>
+  <li><strong>Tailscale Serve</strong>: Tailscale's magicDNS. Basically, Tailscale enables https into 3 ports of each node: 443, 8443, and 10000. In this walkthrough, we point our locally running Glance server to 8443 and expose it over Tailscale https. Why not just expose port 443 to Traefik and add Glance to the network? You could, but it LB/orchestration is overkill so I wouldn't.</li>
+</ul>
+
+<hr>
+
+<h2>Step 1: Configure Your Glance Dashboard</h2>
+<p>
+  First, we need to define what our dashboard will look like. Glance uses a single YAML file for this. Create a file named <code>glance.yml</code>. For this example, we'll assume Uptime Kuma will run on port <code>3001</code> and we have a few other common dev services.
+</p>
+
+<pre><code># glance.yml
+title: "My Local Dev Dashboard"
+links:
+  - name: "Uptime Kuma"
+    description: "Monitoring for all local services"
+    href: "http://localhost:3001"
+    tags: [ 'monitoring', 'infra' ]
