@@ -18,7 +18,7 @@
 <ol>
     <li><strong>Jupyter:</strong> The main webapp for your data science and ML project needs. If you have only ran Jupyter on localhost before, this will be your first time deploying it to be accessed from another machine.</li>
     <li><strong>Traefik:</strong> A cloud-native reverse proxy that will automatically discover and route traffic to our Jupyter container. It acts as the gateway and load balancer to route traffic correctly to the Jupyter container. It will be configured to listen for traffic coming from our secure Tailscale network.</li>
-    <li><strong>Tailscale:</strong> Under the hood, this is a VPN service that implements Wireguard for you with mesh networking. This will create a secure network (a "tailnet") between your registered devices. While this is cumbersome, it also ensure the Jupyter instance will only be accessible from devices you manually added to the tailnet.</li>
+    <li><strong>Tailscale:</strong> Under the hood, this is a VPN service that implements Wireguard for you with mesh networking. This will create a secure network (a "tailnet") between your registered devices. While this is cumbersome, it also ensures the Jupyter instance will only be accessible from devices you manually added to the tailnet.</li>
 </ol>
 
 <h2>The <code>docker-compose.yml</code> File</h2>
@@ -71,7 +71,7 @@ networks:
 
 <h3>Traefik</h3>
 <ul>
-    <li><strong><code>image: "traefik:v2.10"</code>:</strong> We are using a specific version of the official Traefik image.</li>
+    <li><code>image: "traefik:v2.10"</code>: We are using a specific version of the official Traefik image.</li>
     <li><strong><code>command</code>:</strong> These flags configure Traefik:
         <ul>
             <li><code>--api.insecure=true</code>: This exposes the Traefik dashboard on port 8080 for debugging purposes. <strong>For production environments, you should secure this with a password.</strong></li>
@@ -104,11 +104,11 @@ networks:
 
 <h2>Bringing It All Up</h2>
 <ol>
-    <li><strong>Signup your Tailscale account at</strong><a href="https://tailscale.com"></a>.</li>
-    <li><strong>Download Tailscale app on whichever desktop, laptop, or phone you want to add to the VPN. Manually add the device to the VPN from the Tailscale webpage. Copy the magicDNS url to be pasted into Jupyter's compose yml file.</li>
-    <li><strong>In your home desktop CLI, run 'tailscale serve --bg' for serving https onto the VPN (specifically, port 443 will listen to https routed from the Tailscale url).</li>
-    <li><strong>Create a directory</strong> for your project and save the <code>docker-compose.yml</code> file inside it.</li>
-    <li><strong>Run the command:</strong>
+    <li>Signup your Tailscale account at<a href="https://tailscale.com">https://tailscale.com</a>.</li>
+    <li>Download Tailscale app on whichever desktop, laptop, or phone you want to add to the VPN. Manually add the device to the VPN from the Tailscale webpage. Copy the magicDNS url to be pasted into Jupyter's compose yml file.</li>
+    <li>In your home desktop CLI, run 'tailscale serve --bg' for serving https onto the VPN (specifically, port 443 will listen to https routed from the Tailscale url).</li>
+    <li>Create a directory for your project and save the <code>docker-compose.yml</code> file inside it.</li>
+    <li>Run in CLI:
         <pre><code>docker compose up --build -d</code></pre>
     </li>
 </ol>
@@ -117,7 +117,7 @@ networks:
 <h2>Accessing Your Secure Jupyter Lab</h2>
 <p>Once the containers are running, you can access your Jupyter Lab instance.</p>
 <ol>
-    <li><strong>Ensure Tailscale is up and happy</strong> on your local machine .</li>
+    <li>Ensure Tailscale is up and happy on your local machine .</li>
     <li>Open your web browser and navigate to the url you had Traefik pointing towards your Jupyter instance.</li>
 </ol>
 <p>You should be greeted by the Jupyter Lab interface, accessible only from devices on your Tailscale network. The only bottleneck now is the latency and bandwidth your ISP facilitates for your home Internet!</p>

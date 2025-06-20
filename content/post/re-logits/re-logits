@@ -1,15 +1,16 @@
-<h1>About Logits in Neural Networks</h1>
+<p>I used to be afraid of logits. I thought ML models' outputs were labels or numbers - so what's the deal?
+</p>
 
-<p>I used to be afaird of logits. What does it even mean? I thought ML models spits out labels or numbers. The concept was both scary and confusing to appoarch for me for the longest time. As a visual learner, I eventually came upon a way to help wrap my head around what logits are, and by extension, CE loss, for neural networks. This blog post thus documents my own way to understanding logits - and hopefully, would also be of use to you!</p>
+<p> The concept was both scary and confusing to appoarch for me for the longest time. The search space for hyperparamaters is non-trivial and thus a struggling ML student gotta prioritize! Eventually, as a visual learner I eventually came upon a way to help wrap my head around what logits are, and by extension, CE loss. Understanding what logits are also helped me understand how to effectively select the correct loss function for the task. This blog post documents my own way to understanding logits - and hopefully, would also be of use to you!</p>
 
 <h2>What Exactly Are Logits?</h2>
 
-<p>In the context of classification tasks, a neural network's final layer produces raw, unnormalized scores for each class. These scores are what we call <strong>logits</strong>. Think of a logit as the model's "confidence" that a given input belongs to a particular class. A higher logit value for a class means the model is more confident in that class being the correct one.</p>
+<p>For models doing classification tasks (let's call them cls_head(s),) a neural network's final layer produces raw, unnormalized scores for each class. These scores are <strong>logits</strong>, and most often they are immediately processed again into a label (by first dividing by temp, optional) and then softmax, and then either argmax or multinomial pick from this distribution. Was that TMI? Think of logit as the model's "confidence" score for each label. A higher logit means the model is more confident in that class being the correct one.</p>
 
-<p>However, these raw logit values have a couple of limitations:</p>
+<p>Raw logits have a couple of limitations:</p>
 <ul>
-    <li>They are not easily interpretable. A logit of 2.5 doesn't immediately tell you the probability of that class.</li>
-    <li>They can be any real number, from negative infinity to positive infinity. This makes it difficult to compare them across different models or even different outputs from the same model.</li>
+    <li>They are not easily interpretable. They're semi-arbitrary. For example, while both model A and model B may output the same label 1, perhaps label 1 was scored a 10 by A but 900 by B. .</li>
+    <li>Logits can be any real number, from negative infinity to positive infinity depending on your activation function at the last layer.</li>
 </ul>
 
 <h2>Logits in Binary and Multinomial Classification</h2>
@@ -17,52 +18,75 @@
 <p>The concept of logits is central to both binary and multinomial classification problems:</p>
 
 <ul>
-    <li>In <strong>binary classification</strong>, the model typically outputs a single logit. A positive logit suggests one class, while a negative logit suggests the other.</li>
-    <li>In <strong>multinomial classification</strong>, the model outputs a vector of logits, with one logit for each possible class. The class with the highest logit is the model's prediction.</li>
+    <li>In <strong>binary classification</strong>, the model typically outputs a single logit. A positive logit suggests one class, while a negative logit suggests the other. You can indeed make the model output a logit for each class, but that's just unneeded extra compute.</li> 
+    <li>In <strong>multinomial classification</strong>, the model outputs a vector of logits - one logit for each possible class. The class with the highest logit is the model's prediction. But wait - wasn't logits semi-arbitrary?</li>
 </ul>
 
-<h2>From Logits to Probabilities: The Softmax Function</h2>
+<h2>Standardizing Logits into Probabilities: The Softmax Function</h2>
 
-<p>To make logits more interpretable, we need to convert them into probabilities. This is where the <strong>softmax function</strong> comes in. The softmax function takes the vector of logits and transforms it into a probability distribution, where:</p>
+<p>To make logits more interpretable, we need to convert them into probabilities. This is where the <strong>softmax function</strong> comes in. Basically, we are normalizing a vector of logit scores into values between [0, 1]. This essentially yields a probability distribution, where:</p>
 
 <ul>
-    <li>Each value is between 0 and 1.</li>
-    <li>The sum of all values is equal to 1.</li>
+    <li>Each value is in [0,1].</li>
+    <li>They all sum up to 1.</li>
 </ul>
 
-<p>Here's how the softmax function is calculated for a logit vector <code>z</code>:</p>
+<p>Here's softmax (each z is each label's logit - so if your last layer is 3 nodes for a 3 label cls head, it's [z1, z2, z3]):</p>
 
-<pre><code>
-softmax(z_i) = exp(z_i) / sum(exp(z_j)) for all j
-</code></pre>
+$$
+\text{softmax}(z_i) = \frac{e^{z_i}}{\sum_{j=1}^{K} e^{z_j}}
+$$
 
-<p>This conversion is crucial because it allows us to see the model's predicted probability for each class.</p>
+<p>As you see, doing exp() biases for positive logits as they will explosively grow, while exp() will drop to 1 as logits hits 0, and approaches 0 as logits goes to -inf. The point is, all outputs are now converted into positive values, and by nomarlizing them all by dividing by sum - they get between [0,1]. Great - now we have manufactured a way to bias for outputting highest logit values for correct labels - after a couple epochs with backprop we can fully expect the model to output the highest logit score for correct y (note that this is also the only expectations we can have, as model behavior for the other y labels can be chaotically anywhere between assigning them -inf or -1, as long as the correct y is the highest value.) This direction thus has its own biases, but it does the job and it can be implemented with NLL.</p>
 
-<h2>Calculating the Loss: Log and Negative Log-Likelihood</h2>
+<h2>Calculating the Loss: Log and Negative Log-Likelihood (NLL)</h2>
 
-<p>Now that we have probabilities, we can measure how well our model is performing. This is done by calculating the <strong>loss</strong>, which is a measure of the difference between the predicted probabilities and the actual labels. In classification tasks, we often use the <strong>cross-entropy loss</strong>, which is derived from the negative log-likelihood.</p>
+<p>We have "probabilities" which is interpretable as the model's confidence on each label to assign. We have them softmax so they all fall neatly in [0, 1] distribution. However, we still need some further steps to meet 2 limitations. One is that the convention for training in deep learning is to minimize loss, not maximizing correctness - so a simple invertion is needed. Two is runtime complexity: arithmetic operations linearly scales with the number of decimal places (fewer bits to do math on .1 versus .00...001) - so a little trick to apply log to the softmax values is needed to take us out of this sink hole of decimal points. This is pretty relevant for cls head/models dealing with multinomial labeling from a pool of tens of thousands labels - i.e. a LLM model operating with the vocabulary size of languages!</p>
 
-<p>Here's the process:</p>
-<ol>
-    <li><strong>Take the log of the softmax output:</strong> This gives us the log probabilities.</li>
-    <li><strong>Apply the negative log-likelihood:</strong> We take the negative of the log probability of the correct class. This value is our loss. A lower loss indicates a better model performance.</li>
-</ol>
+<p>So ok, now we need to eval our model. We need a loss that tells the model not just <em>if</em> it was wrong, but <em>how wrong</em> it was. This function needs to do two things: turn "maximizing correctness" into a "minimizing loss", and handle the softmax values in a way that use as few binary bits as possible.</p> So now we do NLL:
 
-<p>The reason we use the negative log is that we want to maximize the probability of the correct class. Taking the negative of the log turns this into a minimization problem, which is easier to work with in the context of optimization algorithms like gradient descent.</p>
+$$
+\mathcal{L}_{\text{NLL}} = -\log(p_{c})
+$$
 
-<h2>Visualizing the Changes: Epoch 5 vs. Epoch 45</h2>
+<p>In this formula, <code>p_c</code> is the softmax probability for the one correct class, <code>c</code>. Note that indeed, NLL doesn't care at all about the softmaxed values of other labels by design (other loss like KL would - not NLL.) Let's unpack why this simple formula is so effective:</p>
+<ul>
+<li>The <strong>log</strong> function acts like a magnifying glass for probabilities. It transforms the cramped [0, 1] space into a sprawling [−∞, 0] space, making differences between small numbers (like 0.01 vs 0.001) much larger and more numerically stable for the computer. (i.e. instead of 0.0001 * 0.001, which uses floating point representation and risks underflow, we can do its mathematicaly equivalent of log(0.0001) + log(0.001), which is simply -9.2 + (-6.9) = -16.1)</li>
+<li>The <strong>negative</strong> sign flips this range to [0, ∞). Now, a perfect prediction (probability 1) gives a loss of <code>-log(1) = 0</code>. A terrible prediction (probability close to 0) gives a huge loss. We now have a "cost" that our model can try to minimize.</li>
+</ul>
 
-<p>To see how these values evolve during training, let's look at a couple of snapshots. Here are two images showing the values of the logit, softmax, and loss for both the training and validation sets at different stages of training.</p>
+<h2>The Wrapper Module: Cross-Entropy Loss</h2>
+
+<p>In practice, you'll hear about <strong>CE Loss</strong> but almost never softmax or NLL. In truth, CE Loss is basically softmax + NLL. 
+
+$$
+\mathcal{L}_{\text{CE}} = - \sum_{i=1}^{K} y_i \log(p_i)
+$$
+
+<p>This formula looks more complex, but it's doing the exact same thing. Here, <code>y</code> is the "ground truth" vector, which we represent with one-hot encoding. For example, if the second of three classes is the correct one, then <code>y = [0, 1, 0]</code>. The vector <code>p</code> holds our model's predicted softmax probabilities.</p>
+
+<p>When you compute the sum, every term where the true label <code>y_i</code> is 0 gets zeroed out. The only term that survives is the one where <code>y_i = 1</code>. Nice, so CE loss collapses down to  NLL, <code>-log(p_c)</code>. </p>
+
+<h2>Now, for the Gradient:</h2>
+
+<p>So, we have a loss value. Now what? We need to backprop that single number into millions of tiny nudges for each weight and biases in our neural network. With a bit of chain rule, we get the the derivative (or gradient) of the loss with respect to every parameter.</p>
+
+<h2>Visualizing: Epoch 5 vs. Epoch 45</h2>
+
+<p>To see how these values evolve during training, let's look at a couple of snapshots. First graph is raw logit, 2nd is softmax, 3rd is log of softmax, and 4th is the negative of that log (NLL).</p>
 
 <h3>Epoch 5</h3>
-<p>In the early stages of training, the model is still learning. The logits are likely to be small, and the softmax probabilities will be more evenly distributed. The loss will be relatively high.</p>
+<p>In the early stages of training, the model is still learning. The average softmax of correct label is still <.4, and after NLL we get 1.8 loss which is relatively high. We also include a validation set results in these charts for a sense of the model underperforming on both partitions in the beginning.</p>
 
 <img src="epoch_5.png" alt="Epoch 5 Training vs. Validation" style="width:100%;">
 
 <h3>Epoch 45</h3>
-<p>After more training, the model has learned to distinguish between the classes better. The logits for the correct classes will be higher, and the softmax probabilities will be more confident. The loss will be significantly lower.</p>
+<p>After more training, the model has learned to distinguish between the classes better in the training samples. Notice how the model is outputting nearly .8 softmax for the correct label! Recall that the final label is retrieved using argmax or multinomial pick, so anything that makes a label a "majority vote" is already sufficient. NLL in the training set has now been pushed down to near 0! Sadly, note that validation set NLL spiked - representing overfit.</p>
 
 <img src="epoch_45.png" alt="Epoch 45 Training vs. Validation" style="width:100%;">
+
+<h3>So what?</h3>
+<p>So CE Loss did its job: it has now tuned the model to output the highest possible logit score for the correct label in the training set. The model is now akin to a route-memory parrot where it can assert with high confidence what the correct answer is to be for any samples it has seen thanks to CE Loss. However, it failed to converge towards generalizability - representing the need for other hyperparameters and mechanisms to further improve our model. That's a story for another day as we now have a grasp of how logits work!</p>
 
 <h2>Conclusion</h2>
 
