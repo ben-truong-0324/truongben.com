@@ -1,0 +1,146 @@
+<p>
+So you want to have your own LLM, your own data kept private, and your own hardware utilized. Maybe you have also tried out Ollama and have it running on <code>localhost:11434</code>.
+</p>
+<p>
+What's next?
+</p>
+
+<h2>A secure LLM server over HTTPS behind Traefik and Tailscale VPN</h2>
+<p>
+We'll build a robust, private network for our AI services. This setup will give us clean, secure HTTPS URLs for our internal tools without ever exposing them outside of designated VPN devices.
+</p>
+<ul>
+<li><strong>LLM Inference Server</strong>: We'll use Ollama and run it in Docker Compose. Run it in k3d/k8s if you wish, though I'd consider that medium-stage where reqs include workflow parallelization with multi-node vLLMs each claiming and KV-cache-optimizing its own GPU. For now, let's say our simple PoC prefers flexible model load/unload on a single GPU, making Ollama the better tradeoff. Plus, Ollama's Golang so it's pretty darn fast too.</li>
+<li><strong>Traefik</strong>: Cloud-native modern reverse proxy - adding new components to your "cloud" is as smooth as butter with yaml labels. It will act as our gateway/LB. No noisy-neighbor or security concerns to optimize for at this stage of small dev usage in VPN.</li>
+<li><strong>Tailscale</strong>: Our Wireguard-based 3rd party VPN implementation. Tailscale plays well with Traefik as it will automatically append Traefik's CA to its own trusted pool, making HTTPS quite seamless (in browser.) That is, we get full browser-trusted TLS while some other pathways such as curl which don't have Tailscale in the loop may run into TLS cert errors.</li>
+</ul>
+
+<hr>
+
+<h2>Step 1: Cluster with Traefik</h2>
+<p>
+Traefik will be the entry point for all our services. We'll spin up a network first with it running point. Fun fact: k3d (small k8s in Docker) comes with Traefik as the reverse proxy by default. Isn't that cool?
+</p>
+<pre><code>
+touch docker-compose.yml traefik.yml
+</code></pre>
+
+<pre><code># docker-compose.yml
+services:
+    traefik:
+        image: traefik:v3.0
+        container_name: traefik
+        command:
+            - "--api.insecure=true" # For the dashboard
+            - "--providers.docker=true"
+            - "--providers.docker.exposedbydefault=false"
+            - "--entrypoints.websecure.address=:443"
+        ports:
+            - "80:80" #http port
+            - "443:443" #https port
+            - "8080:8080" # default port for Traefik dashboard
+        volumes:
+            - /var/run/docker.sock:/var/run/docker.sock:ro
+            - ./letsencrypt:/letsencrypt
+        networks:
+            - internal-net
+
+networks:
+    internal-net:
+driver: bridge
+</code></pre>
+
+<h2>Step 2: LLM Server with Ollama</h2>
+<p>
+Now, let's docker compose Ollama and be sure to append it to the current network. Then we set the labels section to instruct Docker to connect this server to Traefik.
+</p>
+<pre><code>
+ollama:
+    image: ollama/ollama
+    container_name: ollama
+    volumes:
+        - ./ollama:/root/.ollama
+    networks:
+        - internal-net
+    labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.${COMPOSE_PROJECT_NAME}_ollama.rule=Host(`you.vpn.ts.net`) && PathPrefix(`/ollama`)"
+        - "traefik.http.routers.${COMPOSE_PROJECT_NAME}_ollama.entrypoints=websecure"
+        - "traefik.http.routers.${COMPOSE_PROJECT_NAME}_ollama.tls=true"
+        - "traefik.http.middlewares.${COMPOSE_PROJECT_NAME}_ollama-strip.stripprefix.prefixes=/ollama"
+        - "traefik.http.routers.${COMPOSE_PROJECT_NAME}_ollama.middlewares=${COMPOSE_PROJECT_NAME}_ollama-strip"
+        - "traefik.http.services.${COMPOSE_PROJECT_NAME}_ollama.loadbalancer.server.port=11434"
+
+</code></pre>
+
+<h2>Step 3: Launch and Test</h2>
+<p>
+Start the stack with Docker Compose.
+</p>
+<pre><code>docker compose up -d --build
+</code></pre>
+<p>
+Once running, you can go check out if it's working!
+</p>
+<pre><code>https://you.vpn.ts.net/ollama
+# you should see: Ollama is running    
+</code></pre>
+
+<pre><code>https://you.vpn.ts.net/ollama/api/tags
+</code></pre>
+<p>
+This endpoint gives you what models this server has ready in disk.</p>
+<p>
+Now, from any other device in the VPN, we can test the endpoint with curl.
+</p>
+<pre><code>curl https://you.vpn.ts.net/api/generate
+-d '{
+"model": "gemma3:12b",
+"prompt": "Why is the sky blue?",
+"stream": true
+}'
+</code></pre>
+<p>If it works, you'll get a JSON response from the model, served over a secure HTTPS connection. You can hook this server url up to Gradio, or any other LCEL agentic workflows you got. You now have a working LLM server and a very rough query router - and they work.</p>
+
+<div style="margin: 2rem 0;">
+    <img src="flask-demo.png" alt="A demo with Flask." style="width:100%; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+    <p><small>A demo with Flask hitting up our LLM server using VPN domain</small></p>
+</div>
+
+<pre><code></code>
+from openai import OpenAI
+
+client = OpenAI(
+    base_url='https://you.vpn.ts.net/ollama/v1/',
+    api_key='ollama', # required but ignored
+)
+
+chat_completion = client.chat.completions.create(
+    messages=[
+        {
+            'role': 'user',
+            'content': 'Say this is a test',
+        }
+    ],
+    model='llama3.2',
+)
+
+response = client.chat.completions.create(
+    model="llava",
+    messages=[
+        {
+            "role": "user",
+            "content": [
+                {"type": "text", "text": "What's in this image?"},
+                {
+                    "type": "image_url",
+                    "image_url": "data:image/png;base64",
+                },
+            ],
+        }
+    ],
+    max_tokens=300,
+)
+</code></pre>
+
+
