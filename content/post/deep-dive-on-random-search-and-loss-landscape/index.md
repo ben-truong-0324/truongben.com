@@ -15,7 +15,7 @@ categories:
   - blog
 authors:
   - admin # Default author, change if needed (refers to content/authors/admin/_index.md)
-summary: "You may suffer from social media bubbles. Your AI suffer from basins of attraction. Such is life."
+summary: "You may suffer from social media bubbles. Your AI suffer from basins of attraction."
 ---
 
 
