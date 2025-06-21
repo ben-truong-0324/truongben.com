@@ -9,21 +9,21 @@ headless: true
 # Order that this section appears on the page.
 weight: 50
 
-title: Get in touch
-subtitle:
+
+title: 'Connect With Me'
+subtitle: 'The best way to get in touch is to connect on LinkedIn.'
 
 content:
-  # Automatically link email and phone or display as text?
-  autolink: true
+  # Since this is a static site, the contact form is disabled.
+  # Instead, let's link to social media.
+  
+  # Contact links
+  contact_links:
+    - icon: linkedin
+      icon_pack: fab
+      name: Connect on LinkedIn
+      link: 'https://www.linkedin.com/in/truongben/'
 
-  # Email form provider
-  form:
-    provider: netlify
-    formspree:
-      id:
-    netlify:
-      # Enable CAPTCHA challenge to reduce spam?
-      captcha: false
 
 design:
   columns: '1'
