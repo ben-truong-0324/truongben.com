@@ -21,6 +21,6 @@ author: admin
 ---
 
 👋 Hi there! I build ML apps for both the cloud and private clusters - hit me up if your team is deploying agentic workflows or NLP+vision tasks with data privacy features.  
-{style="font-size: 1.2rem; background: #FFB76B; background: linear-gradient(to right,  #FF7518 0%, #FF5F1F 50%, # #FF5733 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;text-shadow: 0 2px 4px #f2aa5e;"}
+{style="font-size: 1.2rem; background: #FFB76B; background: linear-gradient(to right,  #FF7518 0%, #FF5F1F 50%, # #FF5733 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;"}
 
 Check out my [resumé](/about/) and projects below ☕
