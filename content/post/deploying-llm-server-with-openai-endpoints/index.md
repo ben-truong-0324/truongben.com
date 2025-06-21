@@ -1,5 +1,5 @@
 ---
-title: "Deploy a LLM server in private cloud "
+title: "Deploying a LLM server in your private cloud "
 subtitle: ""
 date: 2025-06-20T15:11:47-0700
 draft: false 
@@ -17,7 +17,7 @@ categories:
   - blog
 authors:
   - admin # Default author, change if needed (refers to content/authors/admin/_index.md)
-summary: ""
+summary: "So you want to have your own AI, and your own data kept private, and your own hardware utilized."
 
 ---
 

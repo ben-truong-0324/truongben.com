@@ -54,6 +54,10 @@ title: "$POST_TITLE"
 subtitle: "$POST_SUBTITLE"
 date: $CURRENT_DATE
 draft: true 
+image:
+  filename: _.png
+  focal_point: "Smart"
+  preview_only: false
 tags:
 $(echo "$TAGS_FORMATTED")
 categories:
@@ -62,9 +66,6 @@ authors:
   - admin # Default author, change if needed (refers to content/authors/admin/_index.md)
 summary: "$POST_SUMMARY"
 ---
-
-# $POST_TITLE
-
 
 EOF
 
@@ -85,9 +86,6 @@ if [[ "$INCLUDE_HTML_CHOICE" =~ ^[Yy]$ ]]; then
     # Append shortcode call to index.md
     echo "" >> "$INDEX_MD"
     echo "---" >> "$INDEX_MD"
-    echo "## Custom HTML Content Section" >> "$INDEX_MD"
-    echo "" >> "$INDEX_MD"
-    echo "The following content is loaded from '$HTML_FILENAME':" >> "$INDEX_MD"
     # The shortcode call to embed the HTML file
     echo '{{< rawhtml "'"$HTML_FILENAME"'" >}}' >> "$INDEX_MD"
     echo "" >> "$INDEX_MD"
