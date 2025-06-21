@@ -1,4 +1,4 @@
-<p>Here's the big idea: get your model to the lowest point in the loss map. Can you do it?</p>
+<p>The big idea is get your model to the lowest point in the loss landscape.</p>
 <br>
 <p>Let's say, your team leader wants to optimize for accuracy for the sprint, but the BA gave you a hot tip it's gonna be recall, but finance insists ROI depends on precision; while the DL library just care about CE loss or *insert buzzword fn* loss. The darnest thing is, each combination of hyperparameters will point to a different point on the map in each map. Scale that up to thousands, millions of different features, and you have yourself a proper mess.</p>
 
@@ -14,41 +14,41 @@
     <div class="landscape-item" style="flex: 1 1 45%; max-width: 45%; min-width: 280px; text-align: center;">
         <img src="loss_land2.png" alt="Loss landscape for accuracy" style="width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px;">
         <p style="margin-top: 8px; font-size: 0.9em; font-style: italic;">
-            <strong>Map 2: Accuracy.</strong> The team lead's map. Notice the 'lowest point' has shifted to a different coordinate of hyperparameters. Optimizing for loss doesn't guarantee the best accuracy, though we can argue accuracy is basically CE loss... operationally.
+            <strong>Map 2: Accuracy.</strong> The team lead's map. Completely different coordinates for the 'lowest point.'' Optimizing for CE loss doesn't guarantee the best accuracy, though operationally debatable.
         </p>
     </div>
 
     <div class="landscape-item" style="flex: 1 1 45%; max-width: 45%; min-width: 280px; text-align: center;">
         <img src="loss_land3.png" alt="Loss landscape for recall" style="width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px;">
         <p style="margin-top: 8px; font-size: 0.9em; font-style: italic;">
-            <strong>Map 3: Recall.</strong> The BA's map. A completely different terrain. The ideal hyperparameters for best recall and grabbing as many true positives as possible are somewhere else entirely. You want to minimize opportunity cost or no?
+            <strong>Map 3: Recall.</strong> The BA's map. Sweet spot for best recall and grabbing as many true positives as possible are somewhere else entirely. You want to minimize opportunity cost or no?
         </p>
     </div>
 
     <div class="landscape-item" style="flex: 1 1 45%; max-width: 45%; min-width: 280px; text-align: center;">
         <img src="loss_land4.png" alt="Loss landscape for precision" style="width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px;">
         <p style="margin-top: 8px; font-size: 0.9em; font-style: italic;">
-            <strong>Map 4: Precision.</strong> Finance's map. To minimize false positives, we must navigate to yet another optimal coordinate. You want to minimize soon-to-default credit lines or no?
+            <strong>Map 4: Precision.</strong> Finance's map. To minimize false positives, we must navigate to yet another optimal coordinate. You want to give out fewer soon-to-default credit lines or no?
         </p>
     </div>
 </div>
 
 <p>
-    The challenge is clear: each set of hyperparameters takes you to a single spot sure, but its "performance" is judged differently based on the flavor of the eval_perf of the day. Finding the "best" model is thus heavily about tradeoffs - but let's assume that's been resolved. Let's say the current challenge is whether we could even converge towards the global minimum of a single map. Sure you can brute force it, but that's easily exponential O(). So you do randomized search instead to at least PAC converge (which is still better than intractability.)
+    The challenge is clear: each set of hyperparameters takes you to a single spot, but its "performance" is judged differently based on the flavor of the eval_perf of the day. Finding the "best" model is thus heavily about tradeoffs - but let's assume that's been resolved. Let's say the current challenge is whether we could even converge towards the global minimum of a single map. Sure you can brute force it, but that's easily exponential O(). So you do randomized search instead to at least PAC converge (which is still better than intractability.)
 </p>
 <hr>
 <h2>Wait, what's PAC?</h2>
-<p>It'd take a literal forever to flip every rock on the map to find the best spot. This is where the principle of Probably Approximately Correct (PAC) learning comes in. Instead of demanding a guaranteed, perfect solution, it's better to just go with PAC where you're happy with a solution that is "good enough" (approximately correct) with a very high likelihood (probably). Randomized search is how you bring this philosophy to life. By sampling random spots from the enormous problem space, we aren't trying to find the single best needle in an infinite haystack; instead, we are efficiently casting a wide net, making it highly probable that we will discover a high-performing region and land upon an "approximately correct" solution without the impossible cost of brute-force.</p>
+<p>It'd take a literal forever to flip every rock on the map to find the best spot. This is where Probably Approximately Correct (PAC) learning comes in. Instead of demanding a guaranteed, perfect solution, it's better to just go with PAC where you're happy with a solution that is "good enough" (approximately correct) with a very high likelihood (probably). Randomized search is how you bring this philosophy to life. By sampling random spots from the enormous problem space, we aren't trying to find the single best needle in an infinite haystack; instead, we are travelling across different spots on the map and research there - making it highly probable that we will eventually stumble upon a high-performing region. Thus, we'd be PAC and the gains from brute-force-until-best becomes marginal or negative.</p>
 
 <hr>
 <h2>It's ok to just PAC and RO</h2>
 <p>This is where Randomized Optimization (RO) strategies come in.
 </p>
 <p>
-    Real quick - why RO? As you may have noticed, loss maps are often rugged and non-convex. If your starting point was on some random hill and you descend to the neighborhood well, then you declare that well to be the deepest spot in the world while asserting that the Mariana trench is fake news, that'd be suboptimal. That is, the model may hit a local minima and unknowingly got trapped in a <strong>basin of attraction</strong>.
+    Real quick - why RO? As you may have noticed, loss maps are often rugged and non-convex. If your starting point was on some random hill and you descend to the neighborhood well, then you declare that well to be the deepest spot in the world while asserting that the Mariana trench is fake news, that'd be suboptimal. That is, the model may hit a local minima and unknowingly get trapped in a <strong>basin of attraction</strong>.
 </p>
     <p>
-    By randomly restarting our starting point, we can "escape" local basins and hopefully explore a better spot (and eventually stumble upon the basin of the global minimum.) We can now frame this process as exploration vs exploitation. Whenver we start over, we "exploit" the local slopes and descend towards the lowest point possible in the neighborhood. Once there, we will do some quick mental math to decide whether this will be a good stopping point or to continue to "explore" the world and restart again. For a quick recap, lets consider 4 different RO strategies.
+    By randomly restarting, we can "escape" local basins and hopefully explore a better spot (and eventually stumble upon the basin of the global minimum.) We can now frame this process as exploration vs exploitation. Whenver we start over, we "exploit" the local slopes and descend towards the lowest point possible in the neighborhood. Once there, we will do some quick mental math to decide whether this will be a good stopping point or to "explore" again. For a quick recap, lets consider 4 different RO strategies.
     </p>
 
     <div class="ro-strategy-grid" style="display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; margin: 20px 0;">
@@ -56,14 +56,14 @@
         <div class="ro-item" style="flex: 1 1 45%; max-width: 45%; min-width: 280px; text-align: center;">
             <img src="ro_rhc.png" alt="Conceptual visualization of Randomized Hill Climbing" style="width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px;">
             <p style="margin-top: 8px; font-size: 0.9em;">
-                <strong>Randomized Hill Climbing:</strong> Takes the next best random step, but can easily get stuck on the first "peak" it finds (or "basin", depending if we're multiplying by -1 or not.) Restart randomly on the map until hit quota.
+                <strong>Randomized Hill Climbing:</strong> Takes the next best step as you randomly respawn - can easily get stuck on the first "peak" you finds (or "basin", depending if we're multiplying by -1 or not.) Repeat until quota.
             </p>
         </div>
     
         <div class="ro-item" style="flex: 1 1 45%; max-width: 45%; min-width: 280px; text-align: center;">
             <img src="ro_sa.png" alt="Conceptual visualization of Simulated Annealing" style="width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px;">
             <p style="margin-top: 8px; font-size: 0.9em;">
-                <strong>Simulated Annealing:</strong> Either explore or exploit depending on a temp metric that "cools" down to explore less and less. Inspired by hot metal with flexible particle lattice that "shifts" toward a more robust arrangement with each hammering.
+                <strong>Simulated Annealing:</strong> Explore or exploit depending on temperature metric that "cools" down over the loop. Inspired by hot metal with flexible particle lattice that "shifts" toward a more robust arrangement with each hammering.
             </p>
         </div>
     
