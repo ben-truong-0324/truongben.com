@@ -1,0 +1,63 @@
+
+<div class="container">
+    <h2>Can NLP Make Voting Less Painful?</h2>
+    <p>Let's be honest: have you ever voted for a "superintendent of the local water tank" by their intro's word count? You're supposed to vote well, but reading the finetext is a rather silly pain point.</p>
+
+    <p>It was 2019 when I started Apella to use NLP to solve this. NLP can summarize the source material, give us the pros and cons, and do sentiment analysis of "reviewers" from all sides. My vote shall no longer be swayed by word count!</p>
+
+    <hr>
+
+    <h3>The Webapp: Spacy Django</h3>
+    <p>The webapp was built with <a href="https://www.djangoproject.com/" target="_blank">Django</a>. It was easy to spin up, with lots of security features right out the box.</p>
+    <p>The core of the application was a set of interconnected models that represented the key business concepts:</p>
+    <ul>
+        <li><code>Organization</code>: Interest groups - so like city councils or advocacy groups.</li>
+        <li><code>Topic</code>: The specific issues or ballot measures up for debate and vote.</li>
+        <li><code>Campaign</code>: The ballot to be voted on.</li>
+        <li><code>Post</code> and <code>Comment</code>: User-generated content for discussions.</li>
+    </ul>
+
+    <h3>The NLP: Summaries and Sentiment</h3>
+    <p>To make the information more digestible, Apella used Natural Language Processing (NLP) in two key ways:</p>
+    <h4>1. Ballot Summarization</h4>
+    <p>The <code>summary</code> field in the <code>Topic</code> and <code>Campaign</code> models was designed to hold automatically generated summaries of lengthy ballot measures. This was achieved using libraries like <a href="https://spacy.io/" target="_blank">spaCy</a> and <a href="https://www.nltk.org/" target="_blank">NLTK</a> to perform extractive summarization, identifying the most important sentences in a text and combining them to create a concise overview. This script was to be ran on a separated server from the webapp's (i.e. batch jobs from my laptop.)</p>
+    <pre><code># From Apella/topics/models.py
+class Topic(models.Model):
+name = models.CharField(max_length= 255)
+summary = models.TextField()
+...
+</code></pre>
+
+    <h4>2. Sentiment Analysis</h4>
+    <p>The <code>ExplorePost</code> model included a sentiment analysis feature to gauge public opinion. By tracking user interactions (likes and dislikes), as well as analysis of the affects in each review post, we could get a pulse on how the community felt about different topics. This was implemented using libraries like <a href="https://textblob.readthedocs.io/en/dev/" target="_blank">TextBlob</a>, which provides a simple API for sentiment analysis.</p>
+    <pre><code># From Apella/topics/models.py
+class ExplorePost(models.Model):
+content = models.TextField(blank=True, verbose_name="Explore Post")
+...
+liked = models.BooleanField(verbose_name="Negative sentiment", default=False)
+unliked = models.BooleanField(verbose_name="Negative sentiment", default=False)
+...
+</code></pre>
+
+    <hr>
+
+    <h3>The DevOps: Heroku</h3>
+    <p>Back then, <a href="https://www.heroku.com/" target="_blank">Heroku</a> still had a free tier. It also threw in free database servers! Back then, I didn't learn Docker yet so it was a manual rebuild of the Django server on the VPS. It was rough. By using a <code>Procfile</code> to define the application's processes and a <code>requirements.txt</code> file to manage Python dependencies, at least the deployment process was functional. The additional DevOps work was simply Google Analytics and setting the statics onto Google's CDN.
+    </p>
+    <p>This DevOps design wouldn't have scaled - it didn't have CI/CD workflows upon commits or unit tests or hardened tunnels between the webapp server and the ML server or messaging queues or a million other things. But it was a PoC!</p>
+ 
+
+    <figure style="margin-bottom: 3em;">
+        <img src="snapshot1.jpg" alt="Bootstrap for frontend. Good times." style="width: 100%; height: auto; max-width: 700px; display: block; margin: 0 auto; border: 1px solid #ddd;">
+        <figcaption style="margin-top: 8px; font-size: 0.9em;">
+            Figure 1: A quick screenshot. Bootstrap for frontend. Good times
+        </figcaption>
+    </figure>
+
+    <hr>
+
+    <h2>Civic Tech</h2>
+    <p>Apella was an ambitious project, and while it never reached its full potential, I'm still proud. I learned a lot from putting myself out there and meeting folks in person to get buyin from interest groups and council members. Looking back, I spun Apella up right before COVID and the craze of ChatGPT. I'm actually surprised, and somewhat saddened, to see that the same technical and non-technical barriers I ran into are still present. You would think that with all these LLMs floating around, the flow of talent and capital would have diverted from nudging retirees and social media bubbles already to a more sanitized, thorough, and robust approach of informing the overall population of voters. Maybe someday it will.</p>
+
+    <p></p>
+</div>
