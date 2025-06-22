@@ -17,7 +17,7 @@ bio: "I build ML/GenAI apps for the cloud and private clusters."
 
 # Interests (optional display section)
 interests:
-- GenAI apps
+- GenAI Agentic apps
 - Pipeline Store design
 
 # Education (optional section that appears in widgets or sidebar)
@@ -51,9 +51,9 @@ social:
 # Enter email to use Gravatar or enable contact widget
 email: ktruong43@gatech.edu
 ---
-I build ML/GenAI apps coming from a background working with Traefik, K8s, and Kafka. I'm currently pursuing my M.S. in Computer Science (ML track) at Georgia Tech.
+I build ML/Agentic apps with a background with Traefik, k8s, Flink, and WanDB. I'm currently pursuing my M.S. in Computer Science (ML track) at Georgia Tech.
 
-My recent work includes an image-to-3d-print app using text-gen and diffusion models, an adapted transformer model for stock trading, and a LLM-based app for medial diagnosis coding. I also have three years of leadership experience in enterprise operations and 8 years in military Signal operations. My personal focus/direction is ROI, reproducibility, and cross-functional communication.
+My recent work includes an image-to-3d-print app using text-gen and diffusion models, an adapted transformer model for stock trading, and a LLM-based app for medial diagnosis coding. I also have three years of leadership experience in enterprise operations and 8 years in the military as a Signal soldier (sysadmin Army work.)
 
 Outside of work, I’m passionate about mentoring and managing the ever-expanding homelab.
 
