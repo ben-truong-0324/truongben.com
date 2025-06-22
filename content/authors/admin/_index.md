@@ -51,9 +51,9 @@ social:
 # Enter email to use Gravatar or enable contact widget
 email: ktruong43@gatech.edu
 ---
-I build ML/Agentic apps with a background with Traefik, k8s, Flink, and WanDB. I'm currently pursuing my M.S. in Computer Science (ML track) at Georgia Tech.
+I build ML/Agentic apps with a background with Traefik, k8s, Flink, WanDB, and LangSmith. I'm currently pursuing my M.S. in Computer Science (ML track) at Georgia Tech.
 
-My recent work includes an image-to-3d-print app using text-gen and diffusion models, an adapted transformer model for stock trading, and a LLM-based app for medial diagnosis coding. I also have three years of leadership experience in enterprise operations and 8 years in the military as a Signal soldier (sysadmin Army work.)
+My recent work includes an image-to-3d-print app using text-gen and diffusion models, an adapted transformer model for stock trading, and a LLM-based app for medial diagnosis coding. I have 6 YoE as a programmer, 3 YoE in operations leadership, and 8 YoE in the military as infantry and sysadmin soldier.
 
 Outside of work, I’m passionate about mentoring and managing the ever-expanding homelab.
 
