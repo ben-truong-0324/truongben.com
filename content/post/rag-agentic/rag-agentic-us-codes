@@ -1,0 +1,518 @@
+<!-- 
+  RAG Agentic System Analysis - Hugo Addon
+  
+  Instructions for Hugo:
+  1. Place this file in your `/layouts/shortcodes/` directory (e.g., as `rag_analysis.html`).
+  2. In your markdown file, you can now include it by using: {{</* rag_analysis */>}}
+  3. For better site performance, consider moving the <script> tags for the libraries 
+     (Tailwind, Chart.js) to your site's main header or footer template 
+     if they are not already included.
+  4. This component is now theme-agnostic. It will inherit text, background, and border 
+     colors from your Hugo theme.
+-->
+
+<!-- Dependencies -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<div class="container mx-auto p-4 sm:p-6 lg:p-8 max-w-5xl font-sans">
+
+    <!-- Introduction Text -->
+    <div class="prose dark:prose-invert max-w-none prose-p:text-lg prose-p:leading-relaxed mb-12">
+        <p>It's hard to keep up with changes in the law, especially if those documents are too long to read. <br>
+        Why not have an AI read all of them for you - and just prompt control for the other side's (or your own) political bias (or lack thereof!)</p>
+    </div>
+
+    <!-- Data Visualization Section -->
+    <section id="data-visualization" class="mb-12">
+        <h2 class="text-3xl font-bold mb-6 border-b pb-2">Overall Performance & Quality (317 runs)</h2>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- Latency Waterfall Chart -->
+            <div class="p-6 rounded-xl shadow-md border">
+                <h3 class="text-xl font-semibold mb-4 text-center">Latency Waterfall Breakdown (ms)</h3>
+                <canvas id="latencyWaterfallChart"></canvas>
+            </div>
+            <!-- Latency Distribution Card -->
+            <div class="p-6 rounded-xl shadow-md border h-full flex flex-col justify-center">
+                 <h3 class="text-xl font-semibold mb-4 text-center">Total Latency Distribution</h3>
+                 <div class="space-y-3 mt-4 text-center">
+                    <div>
+                        <span class="text-sm">Min / Max</span>
+                        <p class="text-2xl font-semibold">22.7s / 135.6s</p>
+                    </div>
+                    <div>
+                        <span class="text-sm">Median</span>
+                        <p class="text-2xl font-semibold">39.7s</p>
+                    </div>
+                 </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Latency Legends Section -->
+    <section id="latency-legends" class="mb-12">
+        <h2 class="text-3xl font-bold mb-6 border-b pb-2">Pipeline Explained</h2>
+        <div class="space-y-6">
+            <!-- Query Expansion Card -->
+            <div class="p-6 rounded-xl shadow-md border">
+                <h3 class="font-bold text-lg mb-2">Query Expansion</h3>
+                <p>Expands user's query to consider complementing angles to enrich IR and final answer thoroughness.</p>
+            </div>
+            <!-- Retrieval Card -->
+            <div class="p-6 rounded-xl shadow-md border">
+                <h3 class="font-bold text-lg mb-2">Retrieval</h3>
+                <p>BM25 sparse retrieval, then dense retrieval with Qwen3-Embedding-0.6B:F16, and reranking with Qwen3-Reranker-0.6B on RTX 4070 Super.</p>
+            </div>
+            <!-- Synthesis Card -->
+            <div class="p-6 rounded-xl shadow-md border">
+                <h3 class="font-bold text-lg mb-2">Synthesis</h3>
+                <p>One-shot agentic answer for top result, then batch calls for reranked docs, followed by a final merge step. Implemented with ChatOllama using gemma3:4b-it-q4_K_M on RTX 3060</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Best Answers Section - Dropdown -->
+    <br>
+    <section id="best-answers">
+        <h2 class="text-3xl font-bold mb-6 border-b pb-2">Best Answers Showcase</h2>
+        <div class="mb-4">
+            <select id="question-select" class="block w-full p-2 border rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                <option value="answer-age-discrimination">At what age am I protected from age discrimination in employment?</option>
+                <option value="answer-s-corporation">Explain what an 'S corporation' is according to the tax code.</option>
+                <option value="answer-propose-regulation">How does a federal agency formally propose a new regulation?</option>
+                <option value="answer-mobile-accessibility">I am creating a new mobile app. Do I have to make it accessible to people with disabilities?</option>
+                <option value="answer-charity-deduction">If I donate to a registered charity, what are the rules for getting a tax deduction?</option>
+                <option value="answer-patent-protection">If I invent a new type of can opener, how long would a patent protect my invention?</option>
+                <option value="answer-i9-form">My new employer requires me to fill out an I-9 form. What is the purpose of this form?</option>
+                <option value="answer-fmla">What are my rights to medical leave under the Family and Medical Leave Act (FMLA)?</option>
+                <option value="answer-secure-act">What are the key provisions of the Secure Act 2.0?</option>
+                <option value="answer-ada-public-accommodation">What does the Americans with Disabilities Act (ADA) consider a 'public accommodation'?</option>
+                <option value="answer-minimum-wage">What is the federal minimum wage?</option>
+                <option value="answer-security-definition">What is the legal definition of a 'security' under federal law?</option>
+                <option value="answer-chips-act">What is the main goal of the CHIPS and Science Act?</option>
+                <option value="answer-public-domain">What is the process for a work to enter the 'public domain'?</option>
+            </select>
+        </div>
+
+        <div id="answers-container">
+            <!-- Age Discrimination -->
+            <div id="answer-age-discrimination" class="answer-content p-6 rounded-xl shadow-md border">
+                <p class="text-lg font-semibold mb-2">Question: At what age am I protected from age discrimination in employment?</p>
+                <p class="text-sm mb-4">(Score: 5/5 Correct, 5/5 Faithful)</p>
+                <div class="prose dark:prose-invert max-w-none">
+                    <p><strong>TL;DR:</strong> Age discrimination protection under federal law begins at age 40...</p>
+                    <div class="mt-4 p-4 border-l-4">
+                        <h4 class="font-semibold text-md">High-Consistency Citations</h4>
+                        <ul class="list-disc pl-5">
+                            <li>[100.0%] 29 U.S. Code § 623</li>
+                            <li>[100.0%] 29 U.S. Code § 621</li>
+                            <li>[100.0%] 42 U.S. Code § 6103</li>
+                        </ul>
+                    </div>
+                    <div class="mt-4 p-4 border-l-4">
+                        <h4 class="font-semibold text-md">Recall Success Rate (p=0.9)</h4>
+                        <ul class="list-disc pl-5">
+                            <li>BM25 Success Rate: 100.00%</li>
+                            <li>Hybrid Success Rate: 100.00%</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <!-- S Corporation -->
+            <div id="answer-s-corporation" class="answer-content p-6 rounded-xl shadow-md border" style="display: none;">
+                <p class="text-lg font-semibold mb-2">Question: Explain what an 'S corporation' is according to the tax code.</p>
+                <p class="text-sm mb-4">(Score: 5/5 Correct, 5/5 Faithful)</p>
+                <div class="prose dark:prose-invert max-w-none">
+                     <p><strong>TL;DR:</strong> An S corporation is a corporation that avoids double taxation...</p>
+                     <div class="mt-4 p-4 border-l-4">
+                        <h4 class="font-semibold text-md">High-Consistency Citations</h4>
+                        <p>No citations met the 90% consistency threshold.</p>
+                    </div>
+                    <div class="mt-4 p-4 border-l-4">
+                        <h4 class="font-semibold text-md">Recall Success Rate (p=0.9)</h4>
+                        <ul class="list-disc pl-5">
+                            <li>BM25 Success Rate: 100.00%</li>
+                            <li>Hybrid Success Rate: 100.00%</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <!-- Proposing a new regulation -->
+            <div id="answer-propose-regulation" class="answer-content p-6 rounded-xl shadow-md border" style="display: none;">
+                <p class="text-lg font-semibold mb-2">Question: How does a federal agency formally propose a new regulation?</p>
+                <p class="text-sm mb-4">(Score: 5/5 Correct, 5/5 Faithful)</p>
+                <div class="prose dark:prose-invert max-w-none">
+                    <p><strong>TL;DR:</strong> A federal agency formally proposes a new regulation through a multi-step process...</p>
+                    <div class="mt-4 p-4 border-l-4">
+                        <h4 class="font-semibold text-md">High-Consistency Citations</h4>
+                        <ul class="list-disc pl-5">
+                            <li>[100.0%] 5 U.S. Code § 602</li>
+                        </ul>
+                    </div>
+                     <div class="mt-4 p-4 border-l-4">
+                        <h4 class="font-semibold text-md">Recall Success Rate (p=0.9)</h4>
+                        <ul class="list-disc pl-5">
+                            <li>BM25 Success Rate: 100.00%</li>
+                            <li>Hybrid Success Rate: 100.00%</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <!-- Mobile App Accessibility -->
+            <div id="answer-mobile-accessibility" class="answer-content p-6 rounded-xl shadow-md border" style="display: none;">
+                <p class="text-lg font-semibold mb-2">Question: I am creating a new mobile app. Do I have to make it accessible to people with disabilities?</p>
+                <p class="text-sm mb-4">(Score: 5/5 Correct, 5/5 Faithful)</p>
+                <div class="prose dark:prose-invert max-w-none">
+                    <p><strong>TL;DR:</strong> Yes, you likely have to make your mobile app accessible...</p>
+                    <div class="mt-4 p-4 border-l-4">
+                        <h4 class="font-semibold text-md">High-Consistency Citations</h4>
+                        <ul class="list-disc pl-5">
+                             <li>[100.0%] 47 U.S. Code § 619</li>
+                        </ul>
+                    </div>
+                    <div class="mt-4 p-4 border-l-4">
+                        <h4 class="font-semibold text-md">Recall Success Rate (p=0.9)</h4>
+                        <ul class="list-disc pl-5">
+                            <li>BM25 Success Rate: 100.00%</li>
+                            <li>Hybrid Success Rate: 100.00%</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <!-- Charity Donations -->
+            <div id="answer-charity-deduction" class="answer-content p-6 rounded-xl shadow-md border" style="display: none;">
+                <p class="text-lg font-semibold mb-2">Question: If I donate to a registered charity, what are the rules for getting a tax deduction?</p>
+                <p class="text-sm mb-4">(Score: 3/5 Correct, 5/5 Faithful)</p>
+                <div class="prose dark:prose-invert max-w-none">
+                    <p><strong>TL;DR:</strong> Donating to a registered charity can lead to a tax deduction...</p>
+                    <div class="mt-4 p-4 border-l-4">
+                        <h4 class="font-semibold text-md">High-Consistency Citations</h4>
+                        <ul class="list-disc pl-5">
+                            <li>[100.0%] 119-HR1: One Big Beautiful Bill Act</li>
+                        </ul>
+                    </div>
+                    <div class="mt-4 p-4 border-l-4">
+                        <h4 class="font-semibold text-md">Recall Success Rate (p=0.9)</h4>
+                        <ul class="list-disc pl-5">
+                            <li>BM25 Success Rate: 100.00%</li>
+                            <li>Hybrid Success Rate: 100.00%</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <!-- Patent Protection -->
+            <div id="answer-patent-protection" class="answer-content p-6 rounded-xl shadow-md border" style="display: none;">
+                <p class="text-lg font-semibold mb-2">Question: If I invent a new type of can opener, how long would a patent protect my invention?</p>
+                <p class="text-sm mb-4">(Score: 5/5 Correct, 5/5 Faithful)</p>
+                <div class="prose dark:prose-invert max-w-none">
+                    <p><strong>TL;DR:</strong> A new type of can opener's patent protection lasts 20 years...</p>
+                    <div class="mt-4 p-4 border-l-4">
+                        <h4 class="font-semibold text-md">High-Consistency Citations</h4>
+                        <ul class="list-disc pl-5">
+                             <li>[95.2%] 35 U.S. Code § 154</li>
+                        </ul>
+                    </div>
+                     <div class="mt-4 p-4 border-l-4">
+                        <h4 class="font-semibold text-md">Recall Success Rate (p=0.9)</h4>
+                        <ul class="list-disc pl-5">
+                            <li>BM25 Success Rate: 100.00%</li>
+                            <li>Hybrid Success Rate: 95.24%</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <!-- I-9 Form -->
+            <div id="answer-i9-form" class="answer-content p-6 rounded-xl shadow-md border" style="display: none;">
+                <p class="text-lg font-semibold mb-2">Question: My new employer requires me to fill out an I-9 form. What is the purpose of this form?</p>
+                <p class="text-sm mb-4">(Score: 5/5 Correct, 5/5 Faithful)</p>
+                <div class="prose dark:prose-invert max-w-none">
+                    <p><strong>TL;DR:</strong> The I-9 form is your employer's tool to officially verify that you're authorized to work in the United States.</p>
+                    <div class="mt-4 p-4 border-l-4">
+                        <h4 class="font-semibold text-md">High-Consistency Citations</h4>
+                        <ul class="list-disc pl-5">
+                            <li>[100.0%] 42 U.S. Code § 659</li>
+                            <li>[100.0%] 42 U.S. Code § 653a</li>
+                        </ul>
+                    </div>
+                     <div class="mt-4 p-4 border-l-4">
+                        <h4 class="font-semibold text-md">Recall Success Rate (p=0.9)</h4>
+                        <ul class="list-disc pl-5">
+                            <li>BM25 Success Rate: 100.00%</li>
+                            <li>Hybrid Success Rate: 100.00%</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <!-- FMLA -->
+            <div id="answer-fmla" class="answer-content p-6 rounded-xl shadow-md border" style="display: none;">
+                <p class="text-lg font-semibold mb-2">Question: What are my rights to medical leave under the Family and Medical Leave Act (FMLA)?</p>
+                <p class="text-sm mb-4">(Score: 5/5 Correct, 5/5 Faithful)</p>
+                <div class="prose dark:prose-invert max-w-none">
+                    <p><strong>TL;DR:</strong> You are generally eligible for unpaid, job-protected leave under the Family and Medical Leave Act (FMLA) based on your Federal employee status.</p>
+                    <div class="mt-4 p-4 border-l-4">
+                        <h4 class="font-semibold text-md">High-Consistency Citations</h4>
+                        <ul class="list-disc pl-5">
+                            <li>[100.0%] 29 U.S. Code § 2611</li>
+                            <li>[100.0%] 29 U.S. Code § 2613</li>
+                            <li>[100.0%] 29 U.S. Code § 2612</li>
+                        </ul>
+                    </div>
+                     <div class="mt-4 p-4 border-l-4">
+                        <h4 class="font-semibold text-md">Recall Success Rate (p=0.9)</h4>
+                        <ul class="list-disc pl-5">
+                            <li>BM25 Success Rate: 100.00%</li>
+                            <li>Hybrid Success Rate: 100.00%</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <!-- Secure Act 2.0 -->
+            <div id="answer-secure-act" class="answer-content p-6 rounded-xl shadow-md border" style="display: none;">
+                <p class="text-lg font-semibold mb-2">Question: What are the key provisions of the Secure Act 2.0?</p>
+                <p class="text-sm mb-4">(Score: 5/5 Correct, 5/5 Faithful)</p>
+                <div class="prose dark:prose-invert max-w-none">
+                    <p><strong>TL;DR:</strong> Secure Act 2.0 makes changes to how retirement plans are defined, addresses potential issues with multiple state plan enrollments, and provides funding for implementation.</p>
+                    <div class="mt-4 p-4 border-l-4">
+                        <h4 class="font-semibold text-md">High-Consistency Citations</h4>
+                        <ul class="list-disc pl-5">
+                            <li>[95.5%] 119-HR1: One Big Beautiful Bill Act</li>
+                        </ul>
+                    </div>
+                     <div class="mt-4 p-4 border-l-4">
+                        <h4 class="font-semibold text-md">Recall Success Rate (p=0.9)</h4>
+                        <ul class="list-disc pl-5">
+                            <li>BM25 Success Rate: 100.00%</li>
+                            <li>Hybrid Success Rate: 100.00%</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <!-- ADA Public Accommodation -->
+            <div id="answer-ada-public-accommodation" class="answer-content p-6 rounded-xl shadow-md border" style="display: none;">
+                <p class="text-lg font-semibold mb-2">Question: What does the Americans with Disabilities Act (ADA) consider a 'public accommodation'?</p>
+                <p class="text-sm mb-4">(Score: 5/5 Correct, 5/5 Faithful)</p>
+                <div class="prose dark:prose-invert max-w-none">
+                    <p><strong>TL;DR:</strong> A "public accommodation" under the Americans with Disabilities Act (ADA) is essentially any entity...that has complied with its obligations under the law...</p>
+                    <div class="mt-4 p-4 border-l-4">
+                        <h4 class="font-semibold text-md">High-Consistency Citations</h4>
+                        <ul class="list-disc pl-5">
+                            <li>[100.0%] 2 U.S. Code § 1331</li>
+                            <li>[100.0%] 40 U.S. Code § 3314</li>
+                            <li>[100.0%] 29 U.S. Code § 732</li>
+                        </ul>
+                    </div>
+                     <div class="mt-4 p-4 border-l-4">
+                        <h4 class="font-semibold text-md">Recall Success Rate (p=0.9)</h4>
+                        <ul class="list-disc pl-5">
+                            <li>BM25 Success Rate: 100.00%</li>
+                            <li>Hybrid Success Rate: 100.00%</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <!-- Minimum Wage -->
+            <div id="answer-minimum-wage" class="answer-content p-6 rounded-xl shadow-md border" style="display: none;">
+                <p class="text-lg font-semibold mb-2">Question: What is the federal minimum wage?</p>
+                <p class="text-sm mb-4">(Score: 5/5 Correct, 5/5 Faithful)</p>
+                <div class="prose dark:prose-invert max-w-none">
+                    <p><strong>TL;DR:</strong> The federal minimum wage has evolved over time...with a current minimum of $7.25 per hour.</p>
+                    <div class="mt-4 p-4 border-l-4">
+                        <h4 class="font-semibold text-md">High-Consistency Citations</h4>
+                        <ul class="list-disc pl-5">
+                            <li>[95.2%] 41 U.S. Code § 6703</li>
+                            <li>[90.5%] 119-HR1: One Big Beautiful Bill Act</li>
+                        </ul>
+                    </div>
+                     <div class="mt-4 p-4 border-l-4">
+                        <h4 class="font-semibold text-md">Recall Success Rate (p=0.9)</h4>
+                        <ul class="list-disc pl-5">
+                            <li>BM25 Success Rate: 95.24%</li>
+                            <li>Hybrid Success Rate: 95.24%</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <!-- Security Definition -->
+            <div id="answer-security-definition" class="answer-content p-6 rounded-xl shadow-md border" style="display: none;">
+                <p class="text-lg font-semibold mb-2">Question: What is the legal definition of a 'security' under federal law?</p>
+                <p class="text-sm mb-4">(Score: 5/5 Correct, 5/5 Faithful)</p>
+                <div class="prose dark:prose-invert max-w-none">
+                    <p><strong>TL;DR:</strong> A “security” under U.S. law is broadly defined as any financial instrument...</p>
+                    <div class="mt-4 p-4 border-l-4">
+                        <h4 class="font-semibold text-md">High-Consistency Citations</h4>
+                        <ul class="list-disc pl-5">
+                            <li>[100.0%] 15 U.S. Code § 77c</li>
+                            <li>[90.5%] 15 U.S. Code § 78c</li>
+                        </ul>
+                    </div>
+                    <div class="mt-4 p-4 border-l-4">
+                        <h4 class="font-semibold text-md">Recall Success Rate (p=0.9)</h4>
+                        <ul class="list-disc pl-5">
+                            <li>BM25 Success Rate: 100.00%</li>
+                            <li>Hybrid Success Rate: 95.24%</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <!-- CHIPS Act -->
+            <div id="answer-chips-act" class="answer-content p-6 rounded-xl shadow-md border" style="display: none;">
+                <p class="text-lg font-semibold mb-2">Question: What is the main goal of the CHIPS and Science Act?</p>
+                <p class="text-sm mb-4">(Score: 5/5 Correct, 5/5 Faithful)</p>
+                <div class="prose dark:prose-invert max-w-none">
+                    <p><strong>TL;DR:</strong> The CHIPS and Science Act’s core objective is to dramatically boost U.S. semiconductor manufacturing...</p>
+                    <div class="mt-4 p-4 border-l-4">
+                        <h4 class="font-semibold text-md">High-Consistency Citations</h4>
+                        <ul class="list-disc pl-5">
+                            <li>[100.0%] 51 U.S. Code § 70507</li>
+                            <li>[95.5%] 15 U.S. Code § 4603</li>
+                        </ul>
+                    </div>
+                    <div class="mt-4 p-4 border-l-4">
+                        <h4 class="font-semibold text-md">Recall Success Rate (p=0.9)</h4>
+                        <ul class="list-disc pl-5">
+                            <li>BM25 Success Rate: 95.45%</li>
+                            <li>Hybrid Success Rate: 90.91%</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <!-- Public Domain -->
+            <div id="answer-public-domain" class="answer-content p-6 rounded-xl shadow-md border" style="display: none;">
+                <p class="text-lg font-semibold mb-2">Question: What is the process for a work to enter the 'public domain'?</p>
+                <p class="text-sm mb-4">(Score: 3/5 Correct, 5/5 Faithful)</p>
+                <div class="prose dark:prose-invert max-w-none">
+                    <p><strong>TL;DR:</strong> Determining when a work enters the public domain is complex...</p>
+                    <div class="mt-4 p-4 border-l-4">
+                        <h4 class="font-semibold text-md">High-Consistency Citations</h4>
+                        <p>No citations met the 90% consistency threshold.</p>
+                    </div>
+                    <div class="mt-4 p-4 border-l-4">
+                        <h4 class="font-semibold text-md">Recall Success Rate (p=0.9)</h4>
+                        <ul class="list-disc pl-5">
+                            <li>BM25 Success Rate: 100.00%</li>
+                            <li>Hybrid Success Rate: 100.00%</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Additional Visualizations Section -->
+     <br>
+    <section id="additional-visualizations" class="mb-12">
+        <div class="space-y-8">
+            <div class="">
+                <img src="IR_perc_for_80perc_final_used_by_p90_p80_p70_p60.png" alt="IR Percentage for 80% Final Used" class="mx-auto">
+            </div>
+            <div class="">
+                <img src="IR_perc_hit_for_100perc_used_by_p90_p80_p70_p60.png" alt="IR Percentage Hit for 100% Used" class="mx-auto">
+            </div>
+        </div>
+    </section>
+
+</div>
+
+<script>
+    // --- CHART.JS SCRIPT ---
+
+    // Ensure script runs only once, even if included multiple times.
+    if (typeof window.ragChartInitialized === 'undefined') {
+        window.ragChartInitialized = true;
+
+        // 1. Data from your benchmark summary
+        const latencyData = {
+            mean: {
+                query_expansion: 1397.16,
+                retrieval: 10407.73,
+                rerank: 1133.94,
+                synthesis: 27020.21,
+            }
+        };
+
+        // 2. Latency Waterfall Chart
+        const waterfallCtx = document.getElementById('latencyWaterfallChart').getContext('2d');
+        
+        const waterfallData = [];
+        const labels = ['Query Expansion', 'Retrieval', 'Rerank', 'Synthesis'];
+        const values = Object.values(latencyData.mean);
+        let cumulative = 0;
+        for (const value of values) {
+            waterfallData.push([cumulative, cumulative + value]);
+            cumulative += value;
+        }
+        const totalLatency = cumulative;
+        
+        labels.push('Total');
+        waterfallData.push([0, totalLatency]);
+        
+        new Chart(waterfallCtx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Latency (ms)',
+                    data: waterfallData,
+                    backgroundColor: [
+                        'rgba(75, 192, 192, 0.6)', // query_expansion
+                        'rgba(54, 162, 235, 0.6)', // retrieval
+                        'rgba(255, 206, 86, 0.6)', // rerank
+                        'rgba(255, 99, 132, 0.6)',  // synthesis
+                        'rgba(153, 102, 255, 0.6)'  // total
+                    ],
+                    borderColor: [
+                        'rgba(75, 192, 192, 1)',
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(255, 206, 86, 1)',
+                        'rgba(255, 99, 132, 1)',
+                        'rgba(153, 102, 255, 1)'
+                    ],
+                    borderWidth: 1,
+                    barPercentage: 0.8,
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const d = context.raw;
+                                const value = d[1] - d[0];
+                                return `${context.label}: ${value.toFixed(2)} ms`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        title: { display: true, text: 'Cumulative Milliseconds (ms)' }
+                    }
+                }
+            }
+        });
+
+        // 3. Dropdown logic for Best Answers
+        const questionSelect = document.getElementById('question-select');
+        const answersContainer = document.getElementById('answers-container');
+        const answerContents = answersContainer.getElementsByClassName('answer-content');
+
+        questionSelect.addEventListener('change', function() {
+            const selectedId = this.value;
+            
+            // Hide all answers
+            for (let i = 0; i < answerContents.length; i++) {
+                answerContents[i].style.display = 'none';
+            }
+
+            // Show the selected answer
+            const selectedAnswer = document.getElementById(selectedId);
+            if (selectedAnswer) {
+                selectedAnswer.style.display = 'block';
+            }
+        });
+    }
+</script>
