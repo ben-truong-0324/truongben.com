@@ -25,6 +25,14 @@ date_format: Jan 2006
 #   Leave other parameters empty if not required.
 #   Begin multi-line descriptions with YAML's `|2-` multi-line prefix.
 item:
+  - certificate_url: https://learn.nvidia.com/certificates?id=3UYNQABMRR2LcWtQGD6KVQ
+    date_start: '2025-09-02'
+    date_end: ''
+    description: NVIDIA Certificate for Fundamentals of Deep Learning.
+    organization: NVIDIA
+    organization_url: https://www.nvidia.com
+    title: Fundamentals of Deep Learning
+    url: ''
   - certificate_url: https://learn.nvidia.com/certificates?id=bKFemKVQQ-S-8p6ijXQdrw
     date_start: '2025-06-10'
     date_end: ''
