@@ -25,6 +25,14 @@ date_format: Jan 2006
 #   Leave other parameters empty if not required.
 #   Begin multi-line descriptions with YAML's `|2-` multi-line prefix.
 item:
+  - certificate_url: https://learn.nvidia.com/certificates?id=3gcsWBV0R1-CGw9w22Zsyw
+    date_start: '2025-11-15'
+    date_end: ''
+    description: NVIDIA Certificate for Data Parallelism How to Train Deep Learning Models on Multiple GPUs.
+    organization: NVIDIA
+    organization_url: https://www.nvidia.com
+    title: Data Parallelism Training Deep Learning Models on Multiple GPUs
+    url: ''
   - certificate_url: https://learn.nvidia.com/certificates?id=cUCf3weMQqSY87qXLX9t6Q
     date_start: '2025-10-04'
     date_end: ''
