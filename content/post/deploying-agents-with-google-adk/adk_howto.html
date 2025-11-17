@@ -13,84 +13,91 @@
 
   <h2>Step 1: Foundational Agent Construction</h2>
   <p>
-    The initial step involves building a core agent using ADK and Gemini. This
-    includes provisioning the agent with its first tool (e.g., Google Search) to
-    interact with external information. This foundation is then extended to
-    construct a basic multi-agent system, establishing a baseline for more
-    complex architectures.
+    The initial phase involves configuring the environment (e.g., API keys for
+    Gemini) and instantiating a single agent. This is accomplished by defining
+    an <strong>`Agent`</strong> class with its core properties: the
+    <strong>`model`</strong> (e.g., Gemini), an <strong>`instruction`</strong>
+    (the system prompt), and a list of available <strong>`tools`</strong>
+    (such as `Google Search`). The agent is executed using an
+    <strong>`InMemoryRunner`</strong>, which orchestrates the prompt, the
+    agent's reasoning, and the invocation of tools to generate a response.
   </p>
   <ul>
     <li>
       <strong>Whitepaper:</strong>
-      <a href="#">Introduction to Agents</a>
-    </li>
-    <li>
-      <strong>Codelab:</strong>
-      <a href="#">Build your first agent using Gemini and ADK</a>
-    </li>
-    <li>
-      <strong>Codelab:</strong>
-      <a href="#">Build your first multi-agent systems using ADK</a>
+      <a
+        href="https://www.kaggle.com/whitepaper-introduction-to-agents"
+        target="_blank"
+        >Introduction to Agents</a
+      >
     </li>
   </ul>
 
   <h2>Step 2: Implementing Tools and Interoperability</h2>
   <p>
-    An agent's utility is defined by its tools. This stage involves developing
-    custom tools by exposing Python functions as agent-executable actions. To
-    manage these interactions, the <strong>Model Context Protocol (MCP)</strong>
-    is implemented. MCP provides the communication layer for interoperability
-    and managing complex operations, such as pausing for human-in-the-loop
-    (HITL) approval.
+    This stage introduces two advanced patterns for agent tools. The first is
+    the <strong>Model Context Protocol (MCP)</strong>, an open standard for
+    interoperability. Instead of writing custom API clients, an agent uses an
+    <strong>`McpToolset`</strong> to connect to an external MCP server (e.g.,
+    for GitHub or Kaggle), which standardizes access to its available tools.
+  </p>
+  <p>
+    The second pattern is <strong>Long-Running Operations (LROs)</strong>,
+    which are critical for human-in-the-loop (HITL) workflows, such as
+    requiring approval before a costly action. This is implemented by injecting
+    a <strong>`ToolContext`</strong> into the tool function. The function calls
+    <strong>`tool_context.request_confirmation()`</strong> to pause the
+    agent's execution and signal for external input.
+  </p>
+  <p>
+    To manage the pause, the agent must be wrapped in a resumable
+    <strong>`App`</strong> with <strong>`ResumabilityConfig`</strong>. The
+    application's <strong>`Runner`</strong> is then responsible for detecting
+    the <code>adk_request_confirmation</code> event, awaiting the human
+    decision, and resuming the workflow by passing the approval and the original
+    <strong>`invocation_id`</strong> back to the runner.
   </p>
   <ul>
     <li>
       <strong>Whitepaper:</strong>
-      <a href="#"
+      <a
+        href="https://www.kaggle.com/whitepaper-agent-tools-and-interoperability-with-mcp"
+        target="_blank"
         >Agent Tools & Interoperability with Model Context Protocol (MCP)</a
-      >
-    </li>
-    <li>
-      <strong>Codelab:</strong>
-      <a href="#">Explore new ways to add tools to extend what your agents can do</a>
-    </li>
-    <li>
-      <strong>Codelab:</strong>
-      <a href="#"
-        >Explore best practices for tools, including using MCP and long-running
-        operations</a
       >
     </li>
   </ul>
 
   <h2>Step 3: Context Engineering for Statefulness</h2>
   <p>
-    To enable coherent, multi-turn conversations, agents must be stateful.
-    This is achieved through "context engineering," which manages information
-    within the agent's context window. This involves implementing:
+    Context engineering is implemented by distinguishing between two components:
+    <strong>`Sessions`</strong> for short-term, single-conversation history,
+    and <strong>`Memory`</strong> for long-term, persistent knowledge across
+    conversations. A <strong>`MemoryService`</strong> (e.g.,
+    `InMemoryMemoryService` for development or `VertexAiMemoryBankService` for
+    production) is provided to the <strong>`Runner`</strong> alongside the
+    `SessionService`.
+  </p>
+  <p>
+    This enables two core processes. First, <strong>ingestion</strong>, where
+    session data is explicitly persisted to the long-term store using
+    <strong>`memory_service.add_session_to_memory()`</strong>. Second,
+    <strong>retrieval</strong>, where the agent uses built-in tools like
+    <strong>`load_memory`</strong> (reactive search) or
+    <strong>`preload_memory`</strong> (proactive search) to query this
+    knowledge. The ingestion step can be automated by using
+    <strong>`after_agent_callback`</strong> to persist the session after
+    every turn. Production-grade services also perform
+    <strong>memory consolidation</strong>, extracting key facts from raw logs.
   </p>
   <ul>
     <li>
-      <strong>Sessions:</strong> Containers for immediate, single-conversation
-      history.
-    </li>
-    <li>
-      <strong>Memory:</strong> A long-term persistence mechanism for recalling
-      information across sessions.
-    </li>
-  </ul>
-  <ul>
-    <li>
       <strong>Whitepaper:</strong>
-      <a href="#">Context Engineering: Sessions & Memory</a>
-    </li>
-    <li>
-      <strong>Codelab:</strong>
-      <a href="#">Build stateful agents and perform context engineering</a>
-    </li>
-    <li>
-      <strong>Codelab:</strong>
-      <a href="#">Explore how to use memory with your agent</a>
+      <a
+        href="https://www.kaggle.com/whitepaper-context-engineering-sessions-and-memory"
+        target="_blank"
+        >Context Engineering: Sessions & Memory</a
+      >
     </li>
   </ul>
 
@@ -104,12 +111,7 @@
     scalable methods like <strong>LLM-as-a-Judge</strong> or HITL evaluation.
   </p>
   <ul>
-    <li><strong>Whitepaper:</strong> <a href="#">Agent Quality</a></li>
-    <li>
-      <strong>Codelab:</strong>
-      <a href="#">Implement observability to help you debug your agents</a>
-    </li>
-    <li><strong>Codelab:</strong> <a href="#">Evaluate your agents</a></li>
+    <li><strong>Whitepaper:</strong> Agent Quality</li>
   </ul>
 
   <h2>Step 5: Productionization and Deployment</h2>
@@ -122,14 +124,6 @@
     <strong>Vertex AI Agent Engine</strong> on Google Cloud.
   </p>
   <ul>
-    <li><strong>Whitepaper:</strong> <a href="#">Prototype to Production</a></li>
-    <li>
-      <strong>Codelab:</strong>
-      <a href="#">Explore how to use A2A Protocol to have agents interact</a>
-    </li>
-    <li>
-      <strong>Codelab:</strong>
-      <a href="#">Deploy your agent to Agent Engine on Google Cloud</a>
-    </li>
+    <li><strong>Whitepaper:</strong> Prototype to Production</li>
   </ul>
 </article>
