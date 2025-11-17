@@ -1,46 +1,24 @@
 <article>
-  <h2>A Developer's Guide to Building with Google's ADK</h2>
+  <h2>Developing Production-Grade Agents with Google's ADK</h2>
   <p>
-    Building AI agents has quickly moved from a theoretical concept to a
-    practical engineering discipline. But moving from a simple script to a
-    production-grade system that can be reliably governed, observed, and scaled
-    is a major challenge. This is where Google's Agent Development Kit (ADK)
-    provides a framework.
+    Moving AI agents from prototype to a production-grade system requires a
+    methodological approach to governance, reliability, and scale. The Google
+    Agent Development Kit (ADK) provides a framework for this engineering
+    discipline.
   </p>
   <p>
-    This guide provides a step-by-step walkthrough of the agent development
-    lifecycle, from your first "hello world" agent to a scalable, multi-agent
-    system deployed on the cloud.
+    This guide outlines the five key stages of the agent development lifecycle
+    using the ADK, from initial construction to scalable deployment.
   </p>
 
-  <hr />
-
-  <h2>Step 1: Build Your First Core Agent</h2>
+  <h2>Step 1: Foundational Agent Construction</h2>
   <p>
-    The first step is to get a basic agent up and running. This involves
-    understanding the taxonomy of agent capabilities and setting up the
-    foundational "Agent Ops" discipline for reliability.
+    The initial step involves building a core agent using ADK and Gemini. This
+    includes provisioning the agent with its first tool (e.g., Google Search) to
+    interact with external information. This foundation is then extended to
+    construct a basic multi-agent system, establishing a baseline for more
+    complex architectures.
   </p>
-
-  <h3>How-To:</h3>
-  <ul>
-    <li>
-      Use the <strong>Agent Development Kit (ADK)</strong>, powered by Gemini, to
-      build your first agent.
-    </li>
-    <li>
-      Give your agent its first tool: the ability to use
-      <strong>Google Search</strong> to answer questions with up-to-date
-      information.
-    </li>
-    <li>
-      Expand on this by building your first <strong>multi-agent system</strong>,
-      creating a team of specialized agents that follow a basic architectural
-      pattern.
-    </li>
-  </ul>
-
-  <h3>Key Resources:</h3>
   <ul>
     <li>
       <strong>Whitepaper:</strong>
@@ -56,35 +34,15 @@
     </li>
   </ul>
 
-  <hr />
-
-  <h2>Step 2: Give Your Agent Tools & Enable Interoperability</h2>
+  <h2>Step 2: Implementing Tools and Interoperability</h2>
   <p>
-    An agent's real power comes from its ability to interact with the outside
-    world. This step involves creating custom tools and ensuring they can
-    communicate using standard protocols like the Model Context Protocol (MCP).
+    An agent's utility is defined by its tools. This stage involves developing
+    custom tools by exposing Python functions as agent-executable actions. To
+    manage these interactions, the <strong>Model Context Protocol (MCP)</strong>
+    is implemented. MCP provides the communication layer for interoperability
+    and managing complex operations, such as pausing for human-in-the-loop
+    (HITL) approval.
   </p>
-
-  <h3>How-To:</h3>
-  <ul>
-    <li>
-      Move beyond pre-built tools by turning your own
-      <strong>Python functions into custom actions</strong> your agent can
-      perform.
-    </li>
-    <li>
-      Implement the <strong>Model Context Protocol (MCP)</strong>, which defines
-      the architectural components and communication layer for agent
-      interoperability.
-    </li>
-    <li>
-      Explore advanced tool use, such as implementing
-      <strong>long-running operations</strong> where an agent can pause a tool
-      call to wait for human approval before resuming.
-    </li>
-  </ul>
-
-  <h3>Key Resources:</h3>
   <ul>
     <li>
       <strong>Whitepaper:</strong>
@@ -105,34 +63,22 @@
     </li>
   </ul>
 
-  <hr />
-
-  <h2>Step 3: Engineer Context with Sessions and Memory</h2>
+  <h2>Step 3: Context Engineering for Statefulness</h2>
   <p>
-    To create stateful and personalized experiences, agents must remember past
-    interactions. This is the practice of "context engineering," which manages
-    the information within an agent's context window.
+    To enable coherent, multi-turn conversations, agents must be stateful.
+    This is achieved through "context engineering," which manages information
+    within the agent's context window. This involves implementing:
   </p>
-
-  <h3>How-To:</h3>
   <ul>
     <li>
-      Implement <strong>Sessions</strong>, which act as a container for a
-      single, immediate conversation's history. This allows your agent to have
-      coherent, multi-turn conversations.
+      <strong>Sessions:</strong> Containers for immediate, single-conversation
+      history.
     </li>
     <li>
-      Give your agent <strong>long-term Memory</strong>, a persistence
-      mechanism that allows the agent to recall information across different
-      sessions.
-    </li>
-    <li>
-      Use ADK's context engineering features to manage this "working memory" and
-      make your agent stateful.
+      <strong>Memory:</strong> A long-term persistence mechanism for recalling
+      information across sessions.
     </li>
   </ul>
-
-  <h3>Key Resources:</h3>
   <ul>
     <li>
       <strong>Whitepaper:</strong>
@@ -148,37 +94,15 @@
     </li>
   </ul>
 
-  <hr />
-
-  <h2>Step 4: Ensure Quality with Observability and Evaluation</h2>
+  <h2>Step 4: Agent Quality and Observability</h2>
   <p>
-    How do you know your agent is working correctly? This step is crucial for
-    debugging and assuring quality. It relies on the three pillars of
-    observability: Logs, Traces, and Metrics.
+    Assuring agent quality requires a robust evaluation framework built on
+    observability. This framework consists of three pillars:
+    <strong>Logs</strong> (event diaries), <strong>Traces</strong> (narratives
+    of decision-making), and <strong>Metrics</strong> (health reports). This
+    data enables debugging and establishes a continuous feedback loop using
+    scalable methods like <strong>LLM-as-a-Judge</strong> or HITL evaluation.
   </p>
-
-  <h3>How-To:</h3>
-  <ul>
-    <li>
-      Implement <strong>Logs</strong> (the diary) to record discrete events.
-    </li>
-    <li>
-      Implement <strong>Traces</strong> (the narrative) to get full visibility
-      into your agent's end-to-end decision-making process.
-    </li>
-    <li>
-      Implement <strong>Metrics</strong> (the health report) to monitor
-      performance.
-    </li>
-    <li>
-      Use this data to debug failures and establish a feedback loop, using
-      methods like <strong>LLM-as-a-Judge</strong> or
-      <strong>Human-in-the-Loop (HITL)</strong> evaluation to score your
-      agent's response quality.
-    </li>
-  </ul>
-
-  <h3>Key Resources:</h3>
   <ul>
     <li><strong>Whitepaper:</strong> <a href="#">Agent Quality</a></li>
     <li>
@@ -188,32 +112,15 @@
     <li><strong>Codelab:</strong> <a href="#">Evaluate your agents</a></li>
   </ul>
 
-  <hr />
-
-  <h2>Step 5: Go from Prototype to Production</h2>
+  <h2>Step 5: Productionization and Deployment</h2>
   <p>
-    The final step is to take your agent from a local prototype to an
-    enterprise-grade, scalable solution. This involves deploying the agent and
-    enabling it to collaborate with other agents.
+    The final stage transitions the agent from a local prototype to an
+    enterprise-grade service. This involves using the
+    <strong>Agent2Agent (A2A) Protocol</strong> to orchestrate communication
+    between multiple independent agents. The completed system is then packaged
+    as a scalable service and deployed to a managed platform, such as
+    <strong>Vertex AI Agent Engine</strong> on Google Cloud.
   </p>
-
-  <h3>How-To:</h3>
-  <ul>
-    <li>
-      Use the <strong>Agent2Agent (A2A) Protocol</strong> to build systems of
-      multiple, independent agents that can communicate and collaborate.
-    </li>
-    <li>
-      Package your agent to be a production-ready, scalable service.
-    </li>
-    <li>
-      [Optional] Deploy your agent to
-      <strong>Vertex AI Agent Engine</strong> on Google Cloud to manage it as a
-      scalable, production-ready service.
-    </li>
-  </ul>
-
-  <h3>Key Resources:</h3>
   <ul>
     <li><strong>Whitepaper:</strong> <a href="#">Prototype to Production</a></li>
     <li>
@@ -222,17 +129,7 @@
     </li>
     <li>
       <strong>Codelab:</strong>
-      <a href="#">[Optional] Deploy your agent to Agent Engine on Google Cloud</a>
+      <a href="#">Deploy your agent to Agent Engine on Google Cloud</a>
     </li>
   </ul>
-
-  <hr />
-
-  <h2>Conclusion</h2>
-  <p>
-    By following these steps, you can move from a basic agent to a full-fledged,
-    observable, and deployable multi-agent system. The Google ADK provides the
-    framework to manage this complexity, focusing on enterprise-ready needs like
-    governance, security, and interoperability.
-  </p>
 </article>
