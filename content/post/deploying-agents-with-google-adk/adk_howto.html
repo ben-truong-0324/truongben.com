@@ -103,27 +103,69 @@
 
   <h2>Step 4: Agent Quality and Observability</h2>
   <p>
-    Assuring agent quality requires a robust evaluation framework built on
-    observability. This framework consists of three pillars:
-    <strong>Logs</strong> (event diaries), <strong>Traces</strong> (narratives
-    of decision-making), and <strong>Metrics</strong> (health reports). This
-    data enables debugging and establishes a continuous feedback loop using
-    scalable methods like <strong>LLM-as-a-Judge</strong> or HITL evaluation.
+    While observability is a reactive discipline for debugging,
+    <strong>Agent Evaluation</strong> provides a proactive approach to
+    identify quality degradations. This is essential because agents are
+    non-deterministic and must be assessed beyond simple "happy path" tests.
+  </p>
+  <p>
+    The evaluation process involves running a set of test cases defined in an
+    <strong>`*.evalset.json`</strong> file, which contains the user prompt,
+    the expected final response, and the expected tool-call trajectory
+    (including parameters). The <strong>`adk eval`</strong> CLI command
+    executes these tests and compares the agent's actual output against these
+    expectations.
+  </p>
+  <p>
+    Pass/fail thresholds are set in a <strong>`test_config.json`</strong> file,
+    which defines criteria for two key metrics: the
+    <strong>Response Match Score</strong> (text similarity of the final
+    answer) and the <strong>Tool Trajectory Score</strong> (correctness of
+    tool calls and arguments). This systematic regression testing catches
+    deviations in both functional behavior and response quality. More advanced
+    testing can use <strong>User Simulation</strong>, where an LLM
+    dynamically generates prompts to test agent robustness.
   </p>
   <ul>
-    <li><strong>Whitepaper:</strong> Agent Quality</li>
+    <li>
+      <strong>Whitepaper:</strong>
+      <a
+        href="https://www.kaggle.com/whitepaper-agent-quality"
+        target="_blank"
+        >Agent Quality</a
+      >
+    </li>
   </ul>
 
   <h2>Step 5: Productionization and Deployment</h2>
   <p>
-    The final stage transitions the agent from a local prototype to an
-    enterprise-grade service. This involves using the
-    <strong>Agent2Agent (A2A) Protocol</strong> to orchestrate communication
-    between multiple independent agents. The completed system is then packaged
-    as a scalable service and deployed to a managed platform, such as
-    <strong>Vertex AI Agent Engine</strong> on Google Cloud.
+    The final stage, productionization, is facilitated by the
+    <strong>Agent2Agent (A2A) Protocol</strong>, an open standard for
+    multi-agent collaboration. This is ideal for systems that cross network,
+    language, or organizational boundaries. An ADK agent can be
+    <strong>exposed</strong> as a service using the <strong>`to_a2a()`</strong>
+    function, which wraps it in a server and auto-generates an
+    <strong>`agent card`</strong>. This JSON document, served at a
+    well-known path, acts as a formal contract by describing the agent's
+    capabilities (skills) and endpoints.
+  </p>
+  <p>
+    Conversely, a remote agent can be <strong>consumed</strong> by using the
+    <strong>`RemoteA2aAgent`</strong> class. This client-side proxy reads the
+    remote agent's card and makes it available as a local sub-agent. ADK
+    transparently handles all protocol-level communication (e.g., HTTP POSTs
+    to task endpoints), allowing for complex, heterogeneous systems to be built
+    from specialized, independent agents. The system can then be deployed to a
+    scalable platform like <strong>Vertex AI Agent Engine</strong>.
   </p>
   <ul>
-    <li><strong>Whitepaper:</strong> Prototype to Production</li>
+    <li>
+      <strong>Whitepaper:</strong>
+      <a
+        href="https://www.kaggle.com/whitepaper-prototype-to-production"
+        target="_blank"
+        >Prototype to Production</a
+      >
+    </li>
   </ul>
 </article>
