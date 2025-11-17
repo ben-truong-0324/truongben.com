@@ -11,10 +11,14 @@
     using the ADK, from initial construction to scalable deployment.
   </p>
 
-    <div style="margin: 2rem 0;">
-        <img src="agentic_workflow_adk.png" alt="A demo agentic workflow for compliance." style="width:100%; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
-        <p><small>A sample agentic workflow for compliance</small></p>
-    </div>
+  <div style="margin: 2rem 0">
+    <img
+      src="agentic_workflow_adk.png"
+      alt="A demo agentic workflow for compliance."
+      style="width: 100%; border-radius: 8px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1)"
+    />
+    <p><small>A sample agentic workflow for compliance</small></p>
+  </div>
 
   <h2>Step 1: Foundational Agent Construction</h2>
   <p>
@@ -107,11 +111,52 @@
   </ul>
 
   <h2>Step 4: Agent Quality and Observability</h2>
+  <div style="margin: 2rem 0">
+    <img
+      src="count-invocation-plugin.png"
+      alt="Plugins and callbacks and how they integrate into ADK runners"
+      style="width: 100%; border-radius: 8px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1)"
+    />
+    <p><small>Plugins and callbacks and how they integrate into ADK runners</small></p>
+  </div>
   <p>
-    While observability is a reactive discipline for debugging,
-    <strong>Agent Evaluation</strong> provides a proactive approach to
-    identify quality degradations. This is essential because agents are
-    non-deterministic and must be assessed beyond simple "happy path" tests.
+    Ensuring production-grade reliability involves two disciplines: reactive
+    <strong>observability</strong> (debugging what went wrong) and proactive
+    <strong>agent evaluation</strong> (catching failures before they
+    happen).
+  </p>
+
+  <h3>Observability with Plugins and Callbacks</h3>
+  <p>
+    Unlike traditional software, agents can fail mysteriously. Observability
+    provides visibility into the agent's internal decision-making process
+    through logs, traces, and metrics. For local debugging, the ADK Web UI
+    (run with <strong>`adk web --log_level DEBUG`</strong>) offers a
+    detailed, real-time view of LLM prompts and tool calls.
+  </p>
+  <p>
+    For automated or production environments, this logic is captured using
+    <strong>Plugins</strong>. A Plugin is a module that hooks into the
+    agent's lifecycle using specific <strong>Callbacks</strong> (e.g.,
+    <strong>`before_agent_callback`</strong>,
+    <strong>`after_tool_callback`</strong>,
+    <strong>`on_model_error_callback`</strong>). These callbacks can
+    execute custom code, such as logging, at critical points.
+  </p>
+  <p>
+    Instead of building this from scratch, the ADK provides a built-in
+    <strong>`LoggingPlugin`</strong>. By registering this plugin with the
+    <strong>`Runner`</strong>, all agent activity—user messages, LLM
+    requests, tool calls, and errors—is automatically logged, providing a
+    complete execution trace for production monitoring.
+  </p>
+
+  <h3>Agent Evaluation</h3>
+  <p>
+    While observability is reactive, <strong>Agent Evaluation</strong>
+    provides a proactive approach to identify quality degradations. This is
+    essential because agents are non-deterministic and must be assessed
+    beyond simple "happy path" tests.
   </p>
   <p>
     The evaluation process involves running a set of test cases defined in an
@@ -122,16 +167,24 @@
     expectations.
   </p>
   <p>
-    Pass/fail thresholds are set in a <strong>`test_config.json`</strong> file,
-    which defines criteria for two key metrics: the
+    Pass/fail thresholds are set in a <strong>`test_config.json`</strong>
+    file, which defines criteria for two key metrics: the
     <strong>Response Match Score</strong> (text similarity of the final
     answer) and the <strong>Tool Trajectory Score</strong> (correctness of
     tool calls and arguments). This systematic regression testing catches
-    deviations in both functional behavior and response quality. More advanced
-    testing can use <strong>User Simulation</strong>, where an LLM
+    deviations in both functional behavior and response quality. More
+    advanced testing can use <strong>User Simulation</strong>, where an LLM
     dynamically generates prompts to test agent robustness.
   </p>
   <ul>
+    <li>
+      <strong>Whitepaper:</strong>
+      <a
+        href="https://www.kaggle.com/whitepaper-agent-observability-and-logging"
+        target="_blank"
+        >Agent Observability & Logging</a
+      >
+    </li>
     <li>
       <strong>Whitepaper:</strong>
       <a
