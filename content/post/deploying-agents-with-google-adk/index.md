@@ -4,9 +4,10 @@ subtitle: ""
 date: 2025-11-16T17:06:51-0800
 draft: false 
 image:
-  filename: _.png
+  filename: agentic_workflow_adk.png
   focal_point: "Smart"
   preview_only: false
+
 tags:
   - tech
   - ai
