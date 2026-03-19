@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neural Podium | Skill Area | Cortex Protocol</title>
+    <style>
+        :root {
+            --bg-color: #0b0e14;
+            --accent-color: #00f2ff;
+            --dim-border: #21262d;
+            --node-base: #1a1f26;
+            --text-main: #e6edf3;
+            --text-dim: #8b949e;
+            --winner-gold: #ffd700;
+            --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: 'Consolas', 'Monaco', monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 40px 20px;
+            /* Enhanced Cyber Grid */
+            background-image: 
+                linear-gradient(rgba(0, 242, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 242, 255, 0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+        }
+
+        header { margin-bottom: 30px; text-align: center; }
+        h1 {
+            font-size: 1.1rem;
+            letter-spacing: 0.6rem;
+            text-transform: uppercase;
+            font-weight: 300;
+            color: var(--accent-color);
+            text-shadow: 0 0 10px rgba(0, 242, 255, 0.5);
+        }
+
+        .main-layout {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            gap: 40px;
+            width: 100%;
+            max-width: 1300px;
+            margin-bottom: 60px;
+            align-items: center;
+        }
+
+        /* --- Sidebar: Neural Registry with Crown --- */
+        .agent-sidebar {
+            border-left: 1px solid var(--dim-border);
+            padding-left: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .sidebar-title {
+            font-size: 0.65rem;
+            letter-spacing: 3px;
+            color: var(--text-dim);
+            margin-bottom: 15px;
+            text-transform: uppercase;
+        }
+
+        .agent-row {
+            padding: 10px 15px;
+            cursor: pointer;
+            transition: var(--transition);
+            font-size: 0.85rem;
+            color: var(--text-dim);
+            border: 1px solid transparent;
+            position: relative;
+            display: flex;
+            align-items: center;
+            letter-spacing: 1px;
+        }
+
+        .agent-row:hover {
+            color: var(--accent-color);
+            background: rgba(0, 242, 255, 0.04);
+            border-color: rgba(0, 242, 255, 0.08);
+        }
+
+        .agent-row:hover::before {
+            content: '';
+            position: absolute;
+            left: -21px;
+            width: 2px;
+            height: 100%;
+            background: var(--accent-color);
+            box-shadow: 0 0 8px var(--accent-color);
+        }
+
+        /* Stylized Crown for Winner */
+        .winner-crown {
+            width: 16px; height: 16px;
+            fill: var(--winner-gold);
+            filter: drop-shadow(0 0 4px var(--winner-gold));
+            margin-right: 8px;
+            flex-shrink: 0;
+        }
+
+        /* --- Graph Stage: Layered HUD --- */
+        .viz-stage {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 550px;
+        }
+
+        /* HUD Readout (Numbers shown on hover) */
+        .hud-overlay {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 20px;
+            opacity: 0;
+            transition: opacity 0.4s ease;
+        }
+
+        .hud-overlay.active { opacity: 1; }
+
+        .hud-corner { display: flex; flex-direction: column; color: var(--accent-color); }
+        .hud-value { font-size: 1.6rem; font-weight: bold; margin-top: 5px; text-shadow: 0 0 10px rgba(0,242,255,0.7); }
+        .hud-top, .hud-bottom { display: flex; justify-content: space-between; }
+
+        #neural-viz { width: 100%; max-width: 600px; height: auto; }
+
+        /* SVG Elements (Dense Neural Style) */
+        .core-node { fill: var(--bg-color); stroke: var(--accent-color); stroke-width: 2.5; filter: drop-shadow(0 0 12px var(--accent-color)); }
+        .synapse { stroke: #1a1f26; stroke-width: 0.5; fill: none; }
+        .synapse.active-path { stroke: rgba(0, 242, 255, 0.25); stroke-width: 0.9; }
+        .neuron { fill: var(--node-base); transition: all 0.4s ease; }
+        .neuron.active { fill: var(--accent-color); filter: drop-shadow(0 0 8px var(--accent-color)); }
+        
+        .zone-label {
+            fill: #333;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            font-weight: bold;
+            transition: var(--transition);
+        }
+        .zone-label.active { fill: white; text-shadow: 0 0 10px var(--accent-color); }
+
+        /* --- Protocol Table --- */
+        .protocol-container {
+            width: 100%;
+            max-width: 1300px;
+            background: rgba(13, 17, 23, 0.6);
+            border: 1px solid var(--dim-border);
+            border-radius: 4px;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+
+        .protocol-header {
+            background: rgba(48, 54, 61, 0.2);
+            padding: 15px 25px;
+            font-size: 0.7rem;
+            color: var(--accent-color);
+            letter-spacing: 2.5px;
+            border-bottom: 1px solid var(--dim-border);
+            text-transform: uppercase;
+        }
+
+        .protocol-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+        .protocol-table th { text-align: left; padding: 15px 25px; color: var(--text-dim); border-bottom: 1px solid var(--dim-border); text-transform: uppercase; font-size: 0.65rem; }
+        .protocol-table td { padding: 18px 25px; border-bottom: 1px solid rgba(48, 54, 61, 0.2); line-height: 1.6; vertical-align: top; color: var(--text-main); }
+        .protocol-table td:first-child { color: var(--accent-color); font-weight: bold; width: 220px; }
+        .protocol-table tr:last-child td { border-bottom: none; }
+
+        @media (max-width: 950px) {
+            .main-layout { grid-template-columns: 1fr; gap: 20px; }
+            .agent-sidebar { border-left: none; border-bottom: 1px solid var(--dim-border); padding-bottom: 20px; padding-left: 0; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>SKILL ARENA</h1>
+    </header>
+
+    <div class="main-layout">
+        <div class="agent-sidebar">
+            <div class="sidebar-title">SKILLS REGISTRY</div>
+            <div id="agent-list"></div>
+        </div>
+
+        <div class="viz-stage">
+            <div class="hud-overlay" id="hud">
+                <div class="hud-top">
+                    <div class="hud-corner"><span>COHERENCE</span><span class="hud-value" id="val-coherence">0%</span></div>
+                    <div class="hud-corner" style="text-align: right;"><span>RUBRICS</span><span class="hud-value" id="val-rubrics">0%</span></div>
+                </div>
+                <div class="hud-bottom">
+                    <div class="hud-corner"><span>ENTITY MATCH</span><span class="hud-value" id="val-entityAccuracy">0%</span></div>
+                    <div class="hud-corner" style="text-align: right;"><span>CITATIONS</span><span class="hud-value" id="val-citations">0%</span></div>
+                </div>
+            </div>
+
+            <svg id="neural-viz" viewBox="0 0 600 600">
+                <g id="connections-layer"></g>
+                <g id="nodes-layer"></g>
+                <circle cx="300" cy="300" r="16" class="core-node" />
+                <text x="300" y="55" text-anchor="middle" class="zone-label" id="label-coherence">Coherence</text>
+                <text x="560" y="305" text-anchor="end" class="zone-label" id="label-rubrics">Rubrics</text>
+                <text x="300" y="555" text-anchor="middle" class="zone-label" id="label-citations">Citations</text>
+                <text x="40" y="305" text-anchor="start" class="zone-label" id="label-entityAccuracy">Entity Match</text>
+            </svg>
+        </div>
+    </div>
+
+    <div class="protocol-container">
+        <div class="protocol-header">Performance Evaluation Design v1.0</div>
+        <table class="protocol-table">
+            <thead>
+                <tr>
+                    <th>Metric</th>
+                    <th>Evaluation Target & Methodology</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>COHERENCE</td>
+                    <td>Analyzes output coherence and narrative consistency. Utilizes a secondary "Judge LLM" to detect semantic drift, contradictory statements, or non-sequitur logic loops in long-form generation.</td>
+                </tr>
+                <tr>
+                    <td>RUBRICS</td>
+                    <td>A LLM-driven evaluation layer check based on SME generated grading rubrics for PM performance. Penalizes scores based on the count of missed performance or violated negative constraints (e.g., "Do not discuss medical advice").</td>
+                </tr>
+                <tr>
+                    <td>CITATIONS</td>
+                    <td>Calculates the grounding accuracy via count of assertions or discussions based on validated citations.</td>
+                </tr>
+                <tr>
+                    <td>ENTITY MATCH</td>
+                    <td>Named Entity Recognition check. Validates the accuracy of all Proper Nouns, Dates, and Technical Specifications against the input data. Score drop for incorrect or hallucinated entities (e.g., "15,000" vs "150,00").</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+<script>
+    // Expanded Contestant Roster (sorted by score)
+    const agents = [
+        { name: "LENNY-SKILLS", coherence: 95, rubrics: 88, citations: 82, entityAccuracy: 90 }, // WINNER
+        { name: "GREG-V2", coherence: 20, rubrics: 90, citations: 75, entityAccuracy: 85 },
+        { name: "PINCER-A", coherence: 80, rubrics: 82, citations: 90, entityAccuracy: 80 },
+        { name: "ACTUATOR-M1", coherence: 75, rubrics: 78, citations: 70, entityAccuracy: 75 },
+        { name: "SHRIMP-Q3", coherence: 70, rubrics: 72, citations: 65, entityAccuracy: 70 },
+        { name: "LOGIC-D9", coherence: 65, rubrics: 68, citations: 60, entityAccuracy: 65 },
+        { name: "CRAB-C4", coherence: 60, rubrics: 62, citations: 55, entityAccuracy: 60 },
+        { name: "ROBO-E1", coherence: 55, rubrics: 58, citations: 50, entityAccuracy: 55 },
+        { name: "MECHANI-R5", coherence: 50, rubrics: 52, citations: 45, entityAccuracy: 50 },
+        { name: "CLAW-7", coherence: 45, rubrics: 48, citations: 40, entityAccuracy: 45 }
+    ];
+
+    const SVG_NS = "http://www.w3.org/2000/svg";
+    const center = { x: 300, y: 300 };
+    const nodesGroup = document.getElementById('nodes-layer');
+    const connGroup = document.getElementById('connections-layer');
+    const hud = document.getElementById('hud');
+
+    const networkSchema = {
+        layers: [5, 8, 10], // Denser structure
+        nodeRadius: 3.2,
+        layerSpacing: 65, 
+        nodeSpacing: 16   
+    };
+
+    const directions = {
+        coherence: { angle: -Math.PI / 2 },
+        rubrics: { angle: 0 },
+        citations: { angle: Math.PI / 2 },
+        entityAccuracy: { angle: Math.PI }
+    };
+
+    function getCoords(metricKey, layerIdx, nodeIdx, totalNodes) {
+        const angle = directions[metricKey].angle;
+        const posX = (layerIdx + 1) * networkSchema.layerSpacing;
+        const posY = (nodeIdx * networkSchema.nodeSpacing) - ((totalNodes - 1) * networkSchema.nodeSpacing / 2);
+        
+        const rotatedX = posX * Math.cos(angle) - posY * Math.sin(angle);
+        const rotatedY = posX * Math.sin(angle) + posY * Math.cos(angle);
+
+        return { x: center.x + rotatedX, y: center.y + rotatedY };
+    }
+
+    // Stylized Crown SVG for JS injection
+    const crownSVG = `<svg class="winner-crown" viewBox="0 0 100 100">
+                        <path d="M50,15 L62,40 L88,40 L68,60 L78,85 L50,70 L22,85 L32,60 L12,40 L38,40 Z M50,15"/>
+                      </svg>`;
+
+    function init() {
+        // Build the List
+        const list = document.getElementById('agent-list');
+        agents.forEach((agent, idx) => {
+            const div = document.createElement('div');
+            div.className = 'agent-row';
+            
+            // Inject Crown only for the winner (idx 0)
+            if (idx === 0) {
+                div.innerHTML = `${crownSVG}> ${agent.name}`;
+            } else {
+                div.textContent = `> ${agent.name}`;
+            }
+
+            div.addEventListener('mouseenter', () => update(agent));
+            div.addEventListener('mouseleave', reset);
+            list.appendChild(div);
+        });
+
+        // Build the dense layered SVG graph
+        Object.keys(directions).forEach(metric => {
+            // Create Nodes
+            networkSchema.layers.forEach((size, lIdx) => {
+                for (let i = 0; i < size; i++) {
+                    const pos = getCoords(metric, lIdx, i, size);
+                    const circle = document.createElementNS(SVG_NS, "circle");
+                    circle.setAttribute("cx", pos.x);
+                    circle.setAttribute("cy", pos.y);
+                    circle.setAttribute("r", networkSchema.nodeRadius);
+                    circle.classList.add("neuron");
+                    circle.dataset.metric = metric;
+                    circle.dataset.layer = lIdx;
+                    if (lIdx === networkSchema.layers.length - 1) circle.classList.add('output');
+                    nodesGroup.appendChild(circle);
+                }
+            });
+
+            // Create Synapses (Connections)
+            for (let i = 0; i < networkSchema.layers[0]; i++) {
+                const target = getCoords(metric, 0, i, networkSchema.layers[0]);
+                createLine(center, target, metric, 0, i);
+            }
+            for (let l = 0; l < networkSchema.layers.length - 1; l++) {
+                for (let s = 0; s < networkSchema.layers[l]; s++) {
+                    const srcPos = getCoords(metric, l, s, networkSchema.layers[l]);
+                    for (let t = 0; t < networkSchema.layers[l+1]; t++) {
+                        const tgtPos = getCoords(metric, l+1, t, networkSchema.layers[l+1]);
+                        createLine(srcPos, tgtPos, metric, l+1, t);
+                    }
+                }
+            }
+        });
+    }
+
+    function createLine(start, end, metric, tgtLayer, tgtIdx) {
+        const line = document.createElementNS(SVG_NS, "line");
+        line.setAttribute("x1", start.x); line.setAttribute("y1", start.y);
+        line.setAttribute("x2", end.x); line.setAttribute("y2", end.y);
+        line.classList.add("synapse");
+        line.dataset.metric = metric;
+        line.dataset.tgt = `${tgtLayer}-${tgtIdx}`;
+        connGroup.appendChild(line);
+    }
+
+    function update(agent) {
+        hud.classList.add('active');
+        Object.keys(directions).forEach(m => {
+            const score = agent[m];
+            
+            // 1. Update HUD numerical values
+            document.getElementById(`val-${m}`).textContent = `${score}%`;
+            
+            // 2. Update Neural Graph Visuals
+            const outputNodes = nodesGroup.querySelectorAll(`[data-metric="${m}"].output`);
+            const activeOutputCount = Math.floor(score / 10);
+            
+            // Output layer activation
+            outputNodes.forEach((node, idx) => {
+                if (idx < activeOutputCount) node.classList.add('active');
+            });
+
+            // Hidden layers activation (density sim based on score)
+            nodesGroup.querySelectorAll(`[data-metric="${m}"]`).forEach(n => {
+                if (!n.classList.contains('output')) {
+                    const l = parseInt(n.dataset.layer);
+                    if (score > (l * 20)) n.classList.add('active');
+                }
+            });
+
+            // Synapse path activation
+            connGroup.querySelectorAll(`[data-metric="${m}"]`).forEach(s => {
+                const [l, idx] = s.dataset.tgt.split('-');
+                const tgtNode = nodesGroup.querySelectorAll(`[data-metric="${m}"][data-layer="${l}"]`)[idx];
+                if (tgtNode && tgtNode.classList.contains('active')) s.classList.add('active-path');
+            });
+
+            document.getElementById(`label-${m}`).classList.add('active');
+        });
+    }
+
+    function reset() {
+        hud.classList.remove('active');
+        document.querySelectorAll('.neuron, .synapse, .zone-label').forEach(el => el.classList.remove('active', 'active-path'));
+    }
+
+    init();
+</script>
+</body>
+</html>
