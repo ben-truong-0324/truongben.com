@@ -236,3 +236,161 @@ namespace MyComponentLibrary.Tests
         }
     }
 }
+
+
+
+##################################
+
+
+::::rcl-timeline
+:::rcl-timeline-item title="Project Kickoff" timeframe="March 2026"
+Initial meeting with stakeholders to define the project scope and *deliverables*.
+:::
+:::rcl-timeline-item title="Development Phase" timeframe="Q2 2026"
+Engineering team begins sprint cycles.
+:::
+::::
+
+2. The Implementation
+
+Here is the data model, HTML builder, and regex parser to integrate this into your Markdown pipeline.
+Step 1: The Timeline Definition & HTML Builder
+
+This mirrors your TagHelper exactly, generating the required Bootstrap and state template grid classes.
+C#
+
+using System.Collections.Generic;
+using System.Text;
+
+public class TimelineDefinition
+{
+    public string Title { get; set; } = string.Empty;
+    public string Timeframe { get; set; } = string.Empty;
+    public string Content { get; set; } = string.Empty;
+}
+
+public static class TimelineHtmlBuilder
+{
+    public static string Build(List<TimelineDefinition> items)
+    {
+        var sb = new StringBuilder();
+        
+        sb.AppendLine("<div class=\"card overflow-visible\">");
+        sb.AppendLine("  <div class=\"card-block\">");
+        sb.AppendLine("    <ul class=\"row list-unstyled\">");
+        
+        foreach (var item in items)
+        {
+            sb.AppendLine("      <li class=\"col-md-12\">");
+            sb.AppendLine("        <article class=\"row\">");
+            
+            // Left column: Title and Timeframe
+            sb.AppendLine("          <div class=\"col-md-3 text-md-end p-x-md\">");
+            sb.AppendLine($"            <div class=\"h5 m-b-0 m-t\">{item.Title}</div>");
+            sb.AppendLine($"            <div class=\"h6 m-y-0\">{item.Timeframe}</div>");
+            sb.AppendLine("          </div>");
+            
+            // Right column: The dot and the content
+            sb.AppendLine("          <div class=\"col-md-9 pos-rel brd-md-left brd-gray-light p-x-md\">");
+            sb.AppendLine("            <div class=\"timeline-dot d-none d-md-block\">");
+            sb.AppendLine("              <span class=\"dot-line-inner bg-white bg-primary-before brd-gray-light\"></span>");
+            sb.AppendLine("            </div>");
+            
+            // Note the markdown="1" attribute here so inner text renders bold/italics!
+            sb.AppendLine("            <div class=\"m-t m-b-md m-b-0-mobile\" markdown=\"1\">");
+            sb.AppendLine($"              {item.Content}");
+            sb.AppendLine("            </div>");
+            
+            sb.AppendLine("          </div>");
+            sb.AppendLine("        </article>");
+            sb.AppendLine("      </li>");
+        }
+        
+        sb.AppendLine("    </ul>");
+        sb.AppendLine("  </div>");
+        sb.AppendLine("</div>");
+        
+        return sb.ToString();
+    }
+}
+
+Step 2: The Nested Regex Parser
+
+Add these definitions and the processing method to your MarkdownComponentParser.
+C#
+
+using System.Text.RegularExpressions;
+using System.Collections.Generic;
+using System;
+
+public partial class MarkdownComponentParser
+{
+    // Match the PARENT block using 4 colons (::::)
+    [GeneratedRegex(@"^::::rcl-timeline[ \t]*(.*?)\r?\n(.*?)\r?\n::::", RegexOptions.Multiline | RegexOptions.Singleline)]
+    private static partial Regex RclTimelineBlockRegex();
+
+    // Match the CHILD blocks using 3 colons (:::)
+    [GeneratedRegex(@"^:::rcl-timeline-item[ \t]+(.*?)\r?\n(.*?)\r?\n:::", RegexOptions.Multiline | RegexOptions.Singleline)]
+    private static partial Regex RclTimelineItemBlockRegex();
+
+    // Your existing AttributeRegex() is reused here once again
+
+    public static string ProcessTimelines(string rawMarkdown)
+    {
+        return RclTimelineBlockRegex().Replace(rawMarkdown, timelineMatch =>
+        {
+            string innerTimelineContent = timelineMatch.Groups[2].Value;
+            var timelineItems = new List<TimelineDefinition>();
+
+            // Scan INSIDE the parent block for the :::rcl-timeline-item children
+            RclTimelineItemBlockRegex().Replace(innerTimelineContent, itemMatch =>
+            {
+                string attributesString = itemMatch.Groups[1].Value;
+                string itemContent = itemMatch.Groups[2].Value;
+
+                // Parse the key="value" attributes
+                var attributes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                foreach (Match attrMatch in AttributeRegex().Matches(attributesString))
+                {
+                    attributes[attrMatch.Groups[1].Value] = attrMatch.Groups[2].Value;
+                }
+
+                // Extract specific values
+                string title = attributes.GetValueOrDefault("title", string.Empty);
+                string timeframe = attributes.GetValueOrDefault("timeframe", string.Empty);
+
+                timelineItems.Add(new TimelineDefinition 
+                { 
+                    Title = title, 
+                    Timeframe = timeframe, 
+                    Content = itemContent 
+                });
+
+                return string.Empty; 
+            });
+
+            if (timelineItems.Count > 0)
+            {
+                return TimelineHtmlBuilder.Build(timelineItems);
+            }
+
+            return string.Empty; 
+        });
+    }
+}
+
+Step 3: Wire it into the Pipeline
+
+Add this directly to your rendering chain.
+C#
+
+string processedContent = MarkdownComponentParser.ProcessCards(rawMarkdown);
+processedContent = MarkdownComponentParser.ProcessButtons(processedContent);
+processedContent = MarkdownComponentParser.ProcessTabs(processedContent);
+processedContent = MarkdownComponentParser.ProcessBlockquotes(processedContent);
+processedContent = MarkdownComponentParser.ProcessModals(processedContent);
+processedContent = MarkdownComponentParser.ProcessCountdownTimers(processedContent);
+processedContent = MarkdownComponentParser.ProcessStepLists(processedContent);
+processedContent = MarkdownComponentParser.ProcessTimelines(processedContent); // <--- Add Timelines here
+
+string finalHtml = markdownToHtml(processedContent);

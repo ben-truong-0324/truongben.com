@@ -397,3 +397,146 @@ namespace MyComponentLibrary.Tests
         }
     }
 }
+
+
+
+#####################################
+
+
+::::rcl-tabs
+:::rcl-tab title="Overview" id="overview-tab"
+This is the **overview** content. It supports standard markdown!
+:::
+:::rcl-tab title="Requirements"
+If you don't provide an ID, the system will generate one automatically.
+:::
+::::
+
+2. The Implementation
+
+Since the parent tab needs to know the Title and Id of all its children to build the <ul> navigation at the top, our parser will grab the whole ::::rcl-tabs block, extract the children, and build the entire HTML structure in one go.
+Step 1: The Tab Definition & HTML Builder
+
+We need a small data object to hold the tab information while we parse it, and a builder to spit out the raw HTML.
+C#
+
+using System;
+using System.Collections.Generic;
+using System.Text;
+
+// A simple model to hold the data during parsing
+public class TabDefinition
+{
+    public string Title { get; set; } = string.Empty;
+    public string Id { get; set; } = string.Empty;
+    public string Content { get; set; } = string.Empty;
+}
+
+public static class TabsHtmlBuilder
+{
+    public static string Build(List<TabDefinition> tabs)
+    {
+        var sb = new StringBuilder();
+        
+        sb.AppendLine("<div class=\"tabs\">");
+        
+        // 1. Build the Navigation
+        sb.AppendLine("  <ul>");
+        foreach (var tab in tabs)
+        {
+            sb.AppendLine($"    <li><a href=\"#{tab.Id}\">{tab.Title}</a></li>");
+        }
+        sb.AppendLine("  </ul>");
+
+        // 2. Build the Content Sections
+        foreach (var tab in tabs)
+        {
+            // Note the markdown="1" attribute. This tells the downstream 
+            // Markdown compiler (like Markdig) to continue parsing any 
+            // **bold** or *italic* text found inside this HTML tag!
+            sb.AppendLine($"  <section id=\"{tab.Id}\" markdown=\"1\">");
+            sb.AppendLine(tab.Content); 
+            sb.AppendLine("  </section>");
+        }
+        
+        sb.AppendLine("</div>");
+        
+        return sb.ToString();
+    }
+}
+
+Step 2: The Nested Markdown Parser
+
+Add these two new regular expressions and the ProcessTabs method to your existing MarkdownComponentParser class.
+C#
+
+using System.Text.RegularExpressions;
+using System.Collections.Generic;
+using System;
+
+public partial class MarkdownComponentParser
+{
+    // Match the PARENT block using 4 colons (::::)
+    [GeneratedRegex(@"^::::rcl-tabs[ \t]*(.*?)\r?\n(.*?)\r?\n::::", RegexOptions.Multiline | RegexOptions.Singleline)]
+    private static partial Regex RclTabsBlockRegex();
+
+    // Match the CHILD blocks using 3 colons (:::)
+    [GeneratedRegex(@"^:::rcl-tab[ \t]+(.*?)\r?\n(.*?)\r?\n:::", RegexOptions.Multiline | RegexOptions.Singleline)]
+    private static partial Regex RclTabBlockRegex();
+
+    // Your existing AttributeRegex() is reused here!
+
+    public static string ProcessTabs(string rawMarkdown)
+    {
+        // 1. Find all outer ::::rcl-tabs blocks
+        return RclTabsBlockRegex().Replace(rawMarkdown, tabsMatch =>
+        {
+            string innerTabsContent = tabsMatch.Groups[2].Value;
+            var tabsList = new List<TabDefinition>();
+
+            // 2. Scan INSIDE the parent block for the :::rcl-tab children
+            RclTabBlockRegex().Replace(innerTabsContent, tabMatch =>
+            {
+                string attributesString = tabMatch.Groups[1].Value;
+                string tabContent = tabMatch.Groups[2].Value;
+
+                // Parse the attributes (title="", id="")
+                var attributes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                foreach (Match attrMatch in AttributeRegex().Matches(attributesString))
+                {
+                    attributes[attrMatch.Groups[1].Value] = attrMatch.Groups[2].Value;
+                }
+
+                string title = attributes.GetValueOrDefault("title", "Tab");
+                
+                // Use the provided ID, or generate a safe 6-character hex string if missing
+                string id = attributes.GetValueOrDefault("id", $"tab_{Guid.NewGuid().ToString("N").Substring(0, 6)}");
+
+                // Add it to our list for the builder
+                tabsList.Add(new TabDefinition { Title = title, Id = id, Content = tabContent });
+
+                return string.Empty; // We don't need to replace inline, we're rebuilding the whole thing
+            });
+
+            // 3. Send the collected data to the HTML Builder
+            if (tabsList.Count > 0)
+            {
+                return TabsHtmlBuilder.Build(tabsList);
+            }
+
+            // If they wrote an empty tabs block, just return nothing
+            return string.Empty; 
+        });
+    }
+}
+
+Step 3: Add to your pipeline
+
+You can now chain all three of your component processors together before handing the text off to the final Markdown-to-HTML converter.
+C#
+
+string processedContent = MarkdownComponentParser.ProcessCards(rawMarkdown);
+processedContent = MarkdownComponentParser.ProcessButtons(processedContent);
+processedContent = MarkdownComponentParser.ProcessTabs(processedContent); // <--- Add Tabs here
+
+string finalHtml = markdownToHtml(processedContent);

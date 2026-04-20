@@ -333,3 +333,121 @@ namespace MyComponentLibrary.Tests
         }
     }
 }
+
+
+
+###################
+
+Give them a syntax that uses the fenced block style (:::) with simple key="value" attributes on the opening line. It feels exactly like writing a standard Markdown code block, which most users are already comfortable with.
+
+What they will write:
+Markdown
+
+:::rcl-card variant="Icon" title="Online Services" icon="ca-gov-icon-computer" href="/services"
+Here is the description of the service they are looking for.
+:::
+
+2. The Architectural "Gotcha" (The TagHelper Trap)
+
+There is a massive trap here: TagHelpers only execute on physical .cshtml files during the Razor compile/render pipeline. If you convert a Markdown string to HTML at runtime and use @Html.Raw() to display it, Razor will completely ignore the <rcl-card> tags. The browser will receive <rcl-card>, not know what it is, and fail to render your state design system styles (like those ca-gov classes).
+
+The Solution: You need your Markdown pipeline to output the raw Bootstrap HTML directly, bypassing the TagHelper. To keep your code DRY, we will extract the HTML-generating logic out of your TagHelper and into a shared CardHtmlBuilder that both your TagHelper and your Markdown parser can use.
+3. The Implementation
+Step 1: Extract the HTML Logic
+
+Create a static builder so you aren't duplicating HTML strings.
+C#
+
+public static class CardHtmlBuilder
+{
+    // Pass in a simple data object or dictionary of your properties
+    public static string Build(CardVariant variant, string title, string href, string iconClass, string content, bool isGridItem = false, string buttonText = "")
+    {
+        string h100 = isGridItem ? " h-100" : "";
+        string flexInner = isGridItem ? " h-100 d-flex flex-column" : "";
+        string mtAuto = isGridItem ? "mt-auto" : "m-t-md";
+
+        if (variant == CardVariant.Icon)
+        {
+            return $@"
+                <article class=""no-underline d-block bg-gray-50 bg-gray-lightest-hover p-a-md pos-rel{h100}"">
+                    <div class=""text-center p-b"">
+                        <span class=""{iconClass} color-p2 color-p2-hover text-huge d-block"" aria-hidden=""true""></span>
+                        <a href=""{href}"" class=""h4 m-t-0 m-b color-gray-dark link-before text-left no-underline d-block"">{title}</a>
+                        <p class=""color-gray-dark text-left"">{content}</p>
+                    </div>
+                </article>";
+        }
+        
+        // ... (Add your other variant if-statements here exactly as they were) ...
+        
+        return ""; 
+    }
+}
+
+(Now, update your CardTagHelper's ProcessAsync method to simply call this builder and set output.Content.SetHtmlContent(...)).
+Step 2: The Markdown Pre-Processor
+
+Since we just got your [GeneratedRegex] working in the previous steps, we can use that exact same high-performance pattern to find and replace these blocks before you pass the string to your Markdown-to-HTML converter.
+C#
+
+using System.Text.RegularExpressions;
+
+public partial class MarkdownCardParser
+{
+    // Matches the block: :::rcl-card [attributes] \n [content] \n :::
+    // Singleline makes '.' match newlines. Multiline makes '^' match line starts.
+    [GeneratedRegex(@"^:::rcl-card[ \t]*(.*?)\r?\n(.*?)\r?\n:::", RegexOptions.Multiline | RegexOptions.Singleline)]
+    private static partial Regex RclCardBlockRegex();
+
+    // Matches key="value" pairs
+    [GeneratedRegex(@"([a-zA-Z0-9_-]+)=""([^""]+)""")]
+    private static partial Regex AttributeRegex();
+
+    public static string ProcessCards(string rawMarkdown)
+    {
+        return RclCardBlockRegex().Replace(rawMarkdown, match =>
+        {
+            string attributesString = match.Groups[1].Value;
+            string content = match.Groups[2].Value; // The Markdown inside the card
+
+            // 1. Parse the key="value" attributes into a dictionary
+            var attributes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (Match attrMatch in AttributeRegex().Matches(attributesString))
+            {
+                attributes[attrMatch.Groups[1].Value] = attrMatch.Groups[2].Value;
+            }
+
+            // 2. Safely extract values with defaults
+            string title = attributes.GetValueOrDefault("title", string.Empty);
+            string href = attributes.GetValueOrDefault("href", "javascript:;");
+            string iconClass = attributes.GetValueOrDefault("icon", "ca-gov-icon-info");
+            
+            // Parse the enum safely
+            CardVariant variant = CardVariant.Default;
+            if (attributes.TryGetValue("variant", out string? variantStr))
+            {
+                Enum.TryParse(variantStr, true, out variant);
+            }
+
+            // 3. (Optional) If you want the inner text to support bold/italics, 
+            // you might want to run your markdownToHtml Func on the 'content' string here!
+
+            // 4. Generate the raw HTML string
+            return CardHtmlBuilder.Build(variant, title, href, iconClass, content);
+        });
+    }
+}
+
+Step 3: Wire it into your Pipeline
+
+Wherever you are calling your Markdown converter, just run this pre-processor first.
+C#
+
+string markdownContent = File.ReadAllText(filePath);
+
+// 1. Convert the custom ::: directives directly into Bootstrap HTML
+string processedMarkdown = MarkdownCardParser.ProcessCards(markdownContent);
+
+// 2. Pass the result to your standard Markdown pipeline (e.g., Markdig)
+string finalHtml = markdownToHtml(processedMarkdown);

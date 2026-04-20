@@ -287,3 +287,125 @@ namespace MyComponentLibrary.Tests
         }
     }
 }
+
+
+
+##############################
+
+
+:::rcl-blockquote variant="WithImage" author="Jane Doe, Director" imagesrc="/assets/jane.jpg" imagealt="Headshot of Jane Doe"
+Our commitment to accessible digital services ensures that every resident can get the help they need, when they need it.
+:::
+
+2. The Implementation
+
+Just like the previous components, we will extract the HTML logic into a shared builder and then add a new Regex to your parser.
+Step 1: The Blockquote HTML Builder
+
+This mirrors your TagHelper logic exactly, separating the WithImage grid layout from the standard variants.
+C#
+
+public static class BlockquoteHtmlBuilder
+{
+    public static string Build(BlockquoteVariant variant, string author, string imageSrc, string imageAlt, string content)
+    {
+        string footerHtml = string.IsNullOrWhiteSpace(author) 
+            ? string.Empty 
+            : $"<footer>{author}</footer>";
+
+        if (variant == BlockquoteVariant.WithImage)
+        {
+            // The WithImage variant uses a grid row instead of a base blockquote tag
+            return $@"
+                <div class=""row"" markdown=""1"">
+                    <div class=""col-md-4 text-right p-r-md p-t-sm"">
+                        <img src=""{imageSrc}"" class=""img-fluid img-circle height-150"" alt=""{imageAlt}"" />
+                    </div>
+                    <div class=""col-md-8"">
+                        <blockquote>
+                            {content}
+                            {footerHtml}
+                        </blockquote>
+                    </div>
+                </div>";
+        }
+        else
+        {
+            string cssClass = variant switch
+            {
+                BlockquoteVariant.NoGraphic => " class=\"no-quotation-mark\"",
+                BlockquoteVariant.Prominent => " class=\"prominent\"",
+                BlockquoteVariant.Pull => " class=\"pull-quote\"",
+                _ => "" // Default
+            };
+
+            return $@"
+                <blockquote{cssClass} markdown=""1"">
+                    {content}
+                    {footerHtml}
+                </blockquote>";
+        }
+    }
+}
+
+(Note: I added markdown="1" to the wrappers here just like we did for Tabs, ensuring that if your users put bold or links inside their quotes, the Markdown engine still processes them!)
+Step 2: The Blockquote Regex Parser
+
+Add this alongside your other parsers in the MarkdownComponentParser class.
+C#
+
+using System.Text.RegularExpressions;
+using System.Collections.Generic;
+using System;
+
+public partial class MarkdownComponentParser
+{
+    // Match the multi-line block: :::rcl-blockquote [attributes] \n [content] \n :::
+    [GeneratedRegex(@"^:::rcl-blockquote[ \t]*(.*?)\r?\n(.*?)\r?\n:::", RegexOptions.Multiline | RegexOptions.Singleline)]
+    private static partial Regex RclBlockquoteRegex();
+
+    // Your existing AttributeRegex() handles the key="value" pairs
+
+    public static string ProcessBlockquotes(string rawMarkdown)
+    {
+        return RclBlockquoteRegex().Replace(rawMarkdown, match =>
+        {
+            string attributesString = match.Groups[1].Value;
+            string content = match.Groups[2].Value;
+
+            // 1. Parse attributes
+            var attributes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (Match attrMatch in AttributeRegex().Matches(attributesString))
+            {
+                attributes[attrMatch.Groups[1].Value] = attrMatch.Groups[2].Value;
+            }
+
+            // 2. Extract values
+            string author = attributes.GetValueOrDefault("author", string.Empty);
+            string imageSrc = attributes.GetValueOrDefault("imagesrc", string.Empty);
+            string imageAlt = attributes.GetValueOrDefault("imagealt", string.Empty);
+
+            // 3. Parse the Enum
+            BlockquoteVariant variant = BlockquoteVariant.Default;
+            if (attributes.TryGetValue("variant", out string? variantStr))
+            {
+                Enum.TryParse(variantStr, true, out variant);
+            }
+
+            // 4. Build and return the HTML
+            return BlockquoteHtmlBuilder.Build(variant, author, imageSrc, imageAlt, content);
+        });
+    }
+}
+
+Step 3: Wire it into the Pipeline
+
+Add the new processor to your Markdown processing chain. The order doesn't strictly matter as long as they all run before the final Markdown-to-HTML conversion.
+C#
+
+string processedContent = MarkdownComponentParser.ProcessCards(rawMarkdown);
+processedContent = MarkdownComponentParser.ProcessButtons(processedContent);
+processedContent = MarkdownComponentParser.ProcessTabs(processedContent);
+processedContent = MarkdownComponentParser.ProcessBlockquotes(processedContent); // <--- Added here
+
+string finalHtml = markdownToHtml(processedContent);

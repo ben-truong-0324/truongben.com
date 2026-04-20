@@ -230,3 +230,123 @@ namespace MyComponentLibrary.Tests
         }
     }
 }
+
+
+
+
+#########################################
+
+namespace Publish.Models
+{
+    public class SocialMediaConfig
+    {
+        public string? DepartmentFacebookUrl { get; set; }
+        public string? DepartmentTwitterUrl { get; set; }
+        public string? DepartmentLinkedInUrl { get; set; }
+        public string? DepartmentYouTubeUrl { get; set; }
+        public string? DepartmentInstagramUrl { get; set; }
+    }
+}
+
+Step 2: The YAML Parsing Helper
+
+Assuming you have YamlDotNet installed (which is standard for .NET Markdown pipelines), you can create a quick parser. The key here is .IgnoreUnmatchedProperties(), which prevents the app from crashing if a user accidentally adds a YAML key that doesn't exist in your C# class.
+C#
+
+using YamlDotNet.Serialization;
+using YamlDotNet.Serialization.NamingConventions;
+using System.IO;
+
+public static class SocialMediaParser
+{
+    public static SocialMediaConfig GetConfig(string filePath)
+    {
+        // 1. If the file doesn't exist, return an empty config (all nulls)
+        if (!File.Exists(filePath))
+        {
+            return new SocialMediaConfig(); 
+        }
+
+        string yamlContent = File.ReadAllText(filePath);
+
+        // 2. If the file is completely blank, return an empty config
+        if (string.IsNullOrWhiteSpace(yamlContent))
+        {
+            return new SocialMediaConfig();
+        }
+
+        // 3. Deserialize the YAML into our C# object
+        var deserializer = new DeserializerBuilder()
+            .WithNamingConvention(PascalCaseNamingConvention.Instance)
+            .IgnoreUnmatchedProperties() 
+            .Build();
+
+        // Parse and return (using ?? to guarantee we never return null)
+        return deserializer.Deserialize<SocialMediaConfig>(yamlContent) ?? new SocialMediaConfig();
+    }
+}
+
+Step 3: Attach it to your PageModel
+
+Wherever you load your page data (like TryMarkdownFileModelYaml or TemplateBaseModel), you can now load this config and pass it down to the View.
+
+In your TemplateBaseModel (or ViewModel):
+C#
+
+// Use an initializer to satisfy CS8618
+public SocialMediaConfig Socials { get; set; } = new SocialMediaConfig(); 
+
+In your OnGet() or pipeline logic:
+C#
+
+// Path to where the user dropped the file (e.g., wwwroot/config/socials.yml)
+string socialsFilePath = Path.Combine(_env.WebRootPath, "config", "socials.yml");
+
+// Load the data into your model
+baseModel.Socials = SocialMediaParser.GetConfig(socialsFilePath);
+
+Step 4: Render in the Razor View (With CA State Icons)
+
+Now, in your .cshtml layout or footer partial, you just check if the property has a value before rendering the link. Because I know you're using the State Template's ca-gov-icon-* fonts based on your earlier Card component, this will wire right up to them.
+Razor CSHTML
+
+<div class="social-media-links">
+    
+    @* Only renders if the YAML had a valid URL *@
+    @if (!string.IsNullOrWhiteSpace(baseModel.Socials?.DepartmentFacebookUrl))
+    {
+        <a href="@baseModel.Socials.DepartmentFacebookUrl" 
+           class="ca-gov-icon-facebook" 
+           title="Facebook" 
+           target="_blank" 
+           rel="noopener noreferrer">
+           <span class="sr-only">Facebook</span>
+        </a>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(baseModel.Socials?.DepartmentTwitterUrl))
+    {
+        <a href="@baseModel.Socials.DepartmentTwitterUrl" 
+           class="ca-gov-icon-twitter" 
+           title="Twitter" 
+           target="_blank" 
+           rel="noopener noreferrer">
+           <span class="sr-only">Twitter</span>
+        </a>
+    }
+    
+    @* Repeat for LinkedIn, YouTube, etc... *@
+
+</div>
+
+How this experience looks for your users
+
+Now, your content editors simply maintain a file named socials.yml that looks exactly like you suggested:
+YAML
+
+---
+DepartmentFacebookUrl: "https://www.facebook.com/YourDepartment"
+DepartmentTwitterUrl: "https://twitter.com/YourDepartment"
+DepartmentLinkedInUrl: 
+DepartmentYouTubeUrl: ""
+---

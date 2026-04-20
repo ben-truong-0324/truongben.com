@@ -257,3 +257,124 @@ namespace MyComponentLibrary.Tests
         }
     }
 }
+
+
+
+##############################
+
+
+:::rcl-feature-card title="Renew Your License" buttonText="Start Renewal" buttonHref="/renew" imageSrc="/assets/license-bg.jpg" imageAlt="Person holding a license"
+Skip the line and renew your professional license online. **Log in to your account** to view your current status and submit your application.
+:::
+
+2. The Implementation
+
+Here is the HTML builder and regex parser. Notice how I swapped your TagHelper's <p>{content}</p> for a <div markdown="1">{content}</div>. This is an important trick: if a content editor writes multiple paragraphs or bullet points inside the feature card, wrapping them in a <div> prevents generating invalid HTML (like putting a <p> inside another <p>).
+Step 1: The Feature Card HTML Builder
+C#
+
+public static class FeatureCardHtmlBuilder
+{
+    public static string Build(string title, string buttonText, string buttonHref, string buttonAriaLabel, string imageSrc, string imageAlt, string imageHref, string content)
+    {
+        // Resolve Image Link fallback
+        string finalImageHref = string.IsNullOrWhiteSpace(imageHref) ? buttonHref : imageHref;
+
+        // Build accessible button label
+        string ariaLabelHtml = string.IsNullOrWhiteSpace(buttonAriaLabel)
+            ? ""
+            : $" <span class=\"sr-only\">{buttonAriaLabel}</span>";
+
+        return $@"
+<div class=""container"">
+  <div class=""row bg-gray-100"">
+    <div class=""col-md-6 col-lg-4 p-a-md order-2 order-md-1"">
+      <h2 class=""h3 m-t-0"">{title}</h2>
+      
+      <div markdown=""1"">
+        {content}
+      </div>
+      
+      <a href=""{buttonHref}"" class=""btn btn-primary m-y-md"">
+        {buttonText}
+        {ariaLabelHtml}
+      </a>
+    </div>
+    <div class=""col-lg-8 col-md-6 p-0 text-right order-1 order-md-2 d-flex justify-content-center"">
+      <a
+        href=""{finalImageHref}""
+        class=""feature-img""
+        style=""background: url('{imageSrc}')""
+        aria-label=""{imageAlt}""></a>
+    </div>
+  </div>
+</div>";
+    }
+}
+
+Step 2: The Regex Parser
+
+Add this pattern and processing method to your MarkdownComponentParser.
+C#
+
+using System.Text.RegularExpressions;
+using System.Collections.Generic;
+using System;
+
+public partial class MarkdownComponentParser
+{
+    // Match the multi-line block: :::rcl-feature-card [attributes] \n [content] \n :::
+    [GeneratedRegex(@"^:::rcl-feature-card[ \t]*(.*?)\r?\n(.*?)\r?\n:::", RegexOptions.Multiline | RegexOptions.Singleline)]
+    private static partial Regex RclFeatureCardRegex();
+
+    // Your existing AttributeRegex() handles the key="value" pairs
+
+    public static string ProcessFeatureCards(string rawMarkdown)
+    {
+        return RclFeatureCardRegex().Replace(rawMarkdown, match =>
+        {
+            string attributesString = match.Groups[1].Value;
+            string content = match.Groups[2].Value;
+
+            // 1. Parse attributes
+            var attributes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (Match attrMatch in AttributeRegex().Matches(attributesString))
+            {
+                attributes[attrMatch.Groups[1].Value] = attrMatch.Groups[2].Value;
+            }
+
+            // 2. Extract values safely with fallbacks
+            string title = attributes.GetValueOrDefault("title", string.Empty);
+            string buttonText = attributes.GetValueOrDefault("buttontext", string.Empty);
+            string buttonHref = attributes.GetValueOrDefault("buttonhref", "javascript:;");
+            string buttonAriaLabel = attributes.GetValueOrDefault("buttonarialabel", string.Empty);
+            
+            string imageSrc = attributes.GetValueOrDefault("imagesrc", string.Empty);
+            string imageAlt = attributes.GetValueOrDefault("imagealt", string.Empty);
+            string imageHref = attributes.GetValueOrDefault("imagehref", string.Empty);
+
+            // 3. Build and return the HTML
+            return FeatureCardHtmlBuilder.Build(
+                title, buttonText, buttonHref, buttonAriaLabel, 
+                imageSrc, imageAlt, imageHref, content
+            );
+        });
+    }
+}
+
+Step 3: Wire it into the Pipeline
+
+Add the new featured card processor to your parsing chain.
+C#
+
+string processedContent = MarkdownComponentParser.ProcessCards(rawMarkdown);
+processedContent = MarkdownComponentParser.ProcessButtons(processedContent);
+processedContent = MarkdownComponentParser.ProcessTabs(processedContent);
+processedContent = MarkdownComponentParser.ProcessBlockquotes(processedContent);
+processedContent = MarkdownComponentParser.ProcessModals(processedContent);
+processedContent = MarkdownComponentParser.ProcessCountdownTimers(processedContent);
+processedContent = MarkdownComponentParser.ProcessStepLists(processedContent);
+processedContent = MarkdownComponentParser.ProcessTimelines(processedContent);
+processedContent = MarkdownComponentParser.ProcessFeatureCards(processedContent); // <--- Add Feature Cards here
+
+string finalHtml = markdownToHtml(processedContent);

@@ -259,3 +259,156 @@ namespace MyComponentLibrary.Tests
         }
     }
 }
+
+
+########################################
+
+
+For a modal, you definitely want the multi-line ::: syntax, as modals often contain paragraphs, lists, or even other components inside their body.
+
+Because a modal is invisible until triggered, the most important thing to communicate to your non-technical users is that they need an ID so they can actually open it with a button or a link.
+1. The Recommendation for Non-Technical Users
+
+Have them define the modal block anywhere on the page (usually at the bottom is best practice), and then use the button component we built earlier to target it.
+
+What they will write:
+Markdown
+
+Click the button below to view the requirements.
+
+:::rcl-button text="View Requirements" isOutline="true" href="#" data-bs-toggle="modal" data-bs-target="#reqModal" :::
+
+:::rcl-modal modalId="reqModal" title="Eligibility Requirements" size="Lg" showFooter="true"
+Here is a list of what you need:
+* Valid ID
+* Proof of residence
+* Completed application form
+:::
+
+(Note: To make that button work, you might need to quickly update your ButtonHtmlBuilder to pass through data- attributes, or they can just use a standard Markdown link like <a href="#" data-bs-toggle="modal" data-bs-target="#reqModal">Open</a>).
+2. The Implementation
+
+Here is the extraction of your TagHelper logic into the HTML builder and the parser.
+Step 1: The Modal HTML Builder
+
+This handles the Bootstrap modal structure. Notice I added markdown="1" to the <div class="modal-body"> so your users' bulleted lists and bold text render correctly inside the popup!
+C#
+
+public static class ModalHtmlBuilder
+{
+    public static string Build(string modalId, string title, ModalSize size, bool showFooter, string footerCloseText, string content)
+    {
+        string sizeClass = size switch
+        {
+            ModalSize.Lg => " modal-lg",
+            ModalSize.Sm => " modal-sm",
+            ModalSize.Xl => " modal-xl",
+            _ => ""
+        };
+
+        string footerHtml = string.Empty;
+        if (showFooter)
+        {
+            footerHtml = $@"
+                <div class=""modal-footer"">
+                    <button type=""button"" class=""btn btn-default"" data-bs-dismiss=""modal"">
+                        {footerCloseText}
+                    </button>
+                </div>";
+        }
+
+        return $@"
+<div class=""modal fade"" id=""{modalId}"" role=""dialog"" tabindex=""-1"">
+  <div class=""modal-dialog{sizeClass}"">
+    <div class=""modal-content"">
+      <div class=""modal-header"">
+        <h4 class=""modal-title"">{title}</h4>
+        <button type=""button"" class=""close btn btn-secondary"" data-bs-dismiss=""modal"">
+          <span class=""sr-only"">Close modal</span>
+          <span class=""ca-gov-icon-close-mark"" aria-hidden=""true""></span>
+        </button>
+      </div>
+      <div class=""modal-body"" markdown=""1"">
+        {content}
+      </div>
+      {footerHtml}
+    </div>
+  </div>
+</div>";
+    }
+}
+
+Step 2: The Modal Regex Parser
+
+Add this pattern to your MarkdownComponentParser. We will automatically generate an ID for them if they forget to provide one, though it means they won't be able to easily link a button to it.
+C#
+
+using System.Text.RegularExpressions;
+using System.Collections.Generic;
+using System;
+
+public partial class MarkdownComponentParser
+{
+    // Match the multi-line block: :::rcl-modal [attributes] \n [content] \n :::
+    [GeneratedRegex(@"^:::rcl-modal[ \t]*(.*?)\r?\n(.*?)\r?\n:::", RegexOptions.Multiline | RegexOptions.Singleline)]
+    private static partial Regex RclModalRegex();
+
+    // Your existing AttributeRegex() is used again here
+
+    public static string ProcessModals(string rawMarkdown)
+    {
+        return RclModalRegex().Replace(rawMarkdown, match =>
+        {
+            string attributesString = match.Groups[1].Value;
+            string content = match.Groups[2].Value;
+
+            // 1. Parse attributes
+            var attributes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (Match attrMatch in AttributeRegex().Matches(attributesString))
+            {
+                attributes[attrMatch.Groups[1].Value] = attrMatch.Groups[2].Value;
+            }
+
+            // 2. Extract string values
+            string title = attributes.GetValueOrDefault("title", string.Empty);
+            string footerCloseText = attributes.GetValueOrDefault("footerclosetext", "Close");
+            
+            // Generate a random ID if they forgot one, so the HTML is at least valid
+            string modalId = attributes.GetValueOrDefault("modalid", $"modal_{Guid.NewGuid().ToString("N").Substring(0, 6)}");
+
+            // 3. Parse Enums safely (Default is Lg per your TagHelper)
+            ModalSize size = ModalSize.Lg; 
+            if (attributes.TryGetValue("size", out string? sizeStr))
+            {
+                Enum.TryParse(sizeStr, true, out size);
+            }
+
+            // 4. Parse Booleans safely (Default is true per your TagHelper)
+            bool showFooter = true;
+            if (attributes.TryGetValue("showfooter", out string? showFooterStr))
+            {
+                bool.TryParse(showFooterStr, out showFooter);
+            }
+
+            // 5. Build and return the HTML
+            return ModalHtmlBuilder.Build(modalId, title, size, showFooter, footerCloseText, content);
+        });
+    }
+}
+
+Step 3: Wire it into the Pipeline
+
+Add the new modal processor to your chain.
+C#
+
+string processedContent = MarkdownComponentParser.ProcessCards(rawMarkdown);
+processedContent = MarkdownComponentParser.ProcessButtons(processedContent);
+processedContent = MarkdownComponentParser.ProcessTabs(processedContent);
+processedContent = MarkdownComponentParser.ProcessBlockquotes(processedContent);
+processedContent = MarkdownComponentParser.ProcessModals(processedContent); // <--- Add Modals here
+
+string finalHtml = markdownToHtml(processedContent);
+
+A Quick CSS/JS Note
+
+Since this is generating Bootstrap HTML (which the CA State Template uses heavily), ensure that the .cshtml page rendering this markdown has the Bootstrap JavaScript loaded at the bottom of the page (e.g., <script src="...bootstrap.bundle.min.js"></script>). I

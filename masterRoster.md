@@ -270,3 +270,7 @@ just different implementaiton under th ehood inside the libraries.
 
 JS DOM rewrite is a possibliity
 Mrakdig custom reneder / Model logic to override html wrapper before output
+
+
+tab, card, button, block quote, modal, countdowntimer, steplist, timelnie , featured card
+social media

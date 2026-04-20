@@ -205,3 +205,142 @@ namespace MyComponentLibrary.Tests
         }
     }
 }
+
+
+
+
+###################################
+
+
+::::rcl-steplist
+:::rcl-step heading="Step 1: Check your eligibility"
+Before applying, ensure you meet all the requirements outlined in our eligibility guidelines.
+:::
+:::rcl-step heading="Step 2: Gather your documents"
+You will need your **W-2**, **Proof of Identity**, and **Application Form**.
+:::
+::::
+
+2. The Implementation
+
+We need a quick data object to hold the steps, the HTML builder to generate the specific State Template markup, and the regex parser.
+Step 1: The Step List Definition & HTML Builder
+
+Just like the tag helper, this will output the <ol> and <li> elements, along with the specific cagov-step-list-content span.
+C#
+
+using System.Collections.Generic;
+using System.Text;
+
+// A simple model to hold the data during parsing
+public class StepDefinition
+{
+    public string Heading { get; set; } = string.Empty;
+    public string Content { get; set; } = string.Empty;
+}
+
+public static class StepListHtmlBuilder
+{
+    public static string Build(List<StepDefinition> steps)
+    {
+        var sb = new StringBuilder();
+        
+        sb.AppendLine("<ol class=\"cagov-step-list\">");
+        
+        foreach (var step in steps)
+        {
+            // The markdown="1" attribute allows the inner text to render bolding/links!
+            sb.AppendLine("  <li markdown=\"1\">");
+            sb.AppendLine($"    {step.Heading}");
+            sb.AppendLine("    <br />");
+            sb.AppendLine("    <span class=\"cagov-step-list-content\" markdown=\"1\">");
+            sb.AppendLine($"      {step.Content}");
+            sb.AppendLine("    </span>");
+            sb.AppendLine("  </li>");
+        }
+        
+        sb.AppendLine("</ol>");
+        
+        return sb.ToString();
+    }
+}
+
+Step 2: The Nested Regex Parser
+
+Add these to your MarkdownComponentParser class. This works exactly like your Tabs parser: it grabs the parent block, extracts the children, and builds the HTML in one pass.
+C#
+
+using System.Text.RegularExpressions;
+using System.Collections.Generic;
+using System;
+
+public partial class MarkdownComponentParser
+{
+    // Match the PARENT block using 4 colons (::::)
+    [GeneratedRegex(@"^::::rcl-steplist[ \t]*(.*?)\r?\n(.*?)\r?\n::::", RegexOptions.Multiline | RegexOptions.Singleline)]
+    private static partial Regex RclStepListBlockRegex();
+
+    // Match the CHILD blocks using 3 colons (:::)
+    [GeneratedRegex(@"^:::rcl-step[ \t]+(.*?)\r?\n(.*?)\r?\n:::", RegexOptions.Multiline | RegexOptions.Singleline)]
+    private static partial Regex RclStepBlockRegex();
+
+    // Your existing AttributeRegex() is reused here again!
+
+    public static string ProcessStepLists(string rawMarkdown)
+    {
+        // 1. Find all outer ::::rcl-steplist blocks
+        return RclStepListBlockRegex().Replace(rawMarkdown, listMatch =>
+        {
+            string innerListContent = listMatch.Groups[2].Value;
+            var stepsList = new List<StepDefinition>();
+
+            // 2. Scan INSIDE the parent block for the :::rcl-step children
+            RclStepBlockRegex().Replace(innerListContent, stepMatch =>
+            {
+                string attributesString = stepMatch.Groups[1].Value;
+                string stepContent = stepMatch.Groups[2].Value;
+
+                // Parse the attributes
+                var attributes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                foreach (Match attrMatch in AttributeRegex().Matches(attributesString))
+                {
+                    attributes[attrMatch.Groups[1].Value] = attrMatch.Groups[2].Value;
+                }
+
+                // Extract the heading
+                string heading = attributes.GetValueOrDefault("heading", "Next Step");
+
+                // Add to our list
+                stepsList.Add(new StepDefinition { Heading = heading, Content = stepContent });
+
+                return string.Empty; 
+            });
+
+            // 3. Send the collected data to the HTML Builder
+            if (stepsList.Count > 0)
+            {
+                return StepListHtmlBuilder.Build(stepsList);
+            }
+
+            // Return empty string if the block was blank
+            return string.Empty; 
+        });
+    }
+}
+
+Step 3: Wire it into the Pipeline
+
+Add the new processor to your Markdown rendering chain.
+C#
+
+string processedContent = MarkdownComponentParser.ProcessCards(rawMarkdown);
+processedContent = MarkdownComponentParser.ProcessButtons(processedContent);
+processedContent = MarkdownComponentParser.ProcessTabs(processedContent);
+processedContent = MarkdownComponentParser.ProcessBlockquotes(processedContent);
+processedContent = MarkdownComponentParser.ProcessModals(processedContent);
+processedContent = MarkdownComponentParser.ProcessCountdownTimers(processedContent);
+processedContent = MarkdownComponentParser.ProcessStepLists(processedContent); // <--- Add StepLists here
+
+string finalHtml = markdownToHtml(processedContent);
+
+By adding that markdown="1" directly into the StepListHtmlBuilder, you ensure that when the final HTML hits your Markdown converter, it won't ignore standard Markdown lists or bold text tucked inside that .cagov-step-list-content span!
