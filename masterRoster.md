@@ -274,3 +274,181 @@ Mrakdig custom reneder / Model logic to override html wrapper before output
 
 tab, card, button, block quote, modal, countdowntimer, steplist, timelnie , featured card
 social media
+
+[CmdletBinding()]
+param(
+    [switch]$DevBuild,
+    [switch]$ReleaseBuild,
+    [Parameter(Mandatory = $false, Position = 0)]
+    [switch]$NoPush,
+    [switch]$NoTest
+)
+
+if ($args -contains '--no-push') { $NoPush = $true }
+if ($args -contains '--no-test') { $NoTest = $true }
+if ($args -contains '--dev-build') { $DevBuild = $true }
+if ($args -contains '--release-build') { $ReleaseBuild = $true }
+
+if ($DevBuild -and $ReleaseBuild) {
+    Write-Error "Cannot specify both DevBuild and ReleaseBuild. Choose one."
+    exit 1
+}
+
+$ArtifactsDir = "local-nugget-feed"
+
+$CleanPath1 = "$HOME/.nugget/packages/webtemplatelibrary"
+$CleanPath2 = "$HOME/.nugget/packages/webtemplaterazorlibrary"
+$CleanPath3 = "$HOME/.nugget/packages/webtemplates"
+
+# Demo Project Paths
+$demoProjPath = "WebTemplateDemo\WebTemplateDemo.csproj"
+$demoTestsProjPath = "WebTemplateDemoTests\WebTemplateDemoTests.csproj"
+
+Set-StrictMode -Version Latest
+$ErrorActionPreference = 'Stop'
+
+function Section([string]$Name) {
+    Write-Host "`n== $Name ===" -ForegroundColor Cyan
+}
+
+function Exec {
+    param(
+    [Parameter(Mandatory = $true)]
+    [string]$Cmd,
+
+    [Parameter()]
+    [string[]]$Arguments = @()
+    )
+
+    $render = "$Cmd " + $($Arguments -join ' ')
+    Write-Host "> $render" -ForegroundColor DarkGray
+
+    & $Cmd @Arguments
+
+    if ($LASTEXITCODE -ne 0) {
+        throw "Command failed with exit code $LASTEXITCODE"
+    }
+}
+
+function Ensure-Dir([String]$path) {
+    if (-not (Test-Path $path)) {
+        New-Item -ItemType Directory -Path $path | Out-Null
+    }
+}
+
+# Helper function to swap Project/Package references in csproj
+function Swap-References {
+    param([string]$FilePath, [string]$FindRegex, [string]$Replace)
+    
+    if (Test-Path $FilePath) {
+        $content = Get-Content $FilePath -Raw
+        if ($content -match $FindRegex) {
+            $content = $content -replace $FindRegex, $Replace
+            Set-Content -Path $FilePath -Value $content -NoNewline
+            Write-Host "  Updated $FilePath" -ForegroundColor DarkGray
+        }
+    } else {
+        Write-Warning "Could not find file to swap references: $FilePath"
+    }
+}
+
+try {
+    Section "Clean"
+    Exec "dotnet" @("clean")
+
+    if ($CleanPath1 -and (Test-Path $CleanPath1)) {
+        Write-Host "Removing $CleanPath1" -ForegroundColor Gray
+        Remove-Item -Path $CleanPath1 -Recurse -Force
+    }
+
+    if ($CleanPath2 -and (Test-Path $CleanPath2)) {
+        Write-Host "Removing $CleanPath2" -ForegroundColor Gray
+        Remove-Item -Path $CleanPath2 -Recurse -Force
+    }
+
+    if ($CleanPath3 -and (Test-Path $CleanPath3)) {
+        Write-Host "Removing $CleanPath3" -ForegroundColor Gray
+        Remove-Item -Path $CleanPath3 -Recurse -Force
+    }
+
+    Ensure-Dir $ArtifactsDir
+    Write-Host "Cleaning $ArtifactsDir/" -ForegroundColor Gray
+    Remove-Item -Path (Join-Path $ArtifactsDir "*") -Recurse -Force
+
+    # ==========================================
+    # DEV / RELEASE BUILD LOGIC
+    # ==========================================
+    
+    # Regex patterns to find either variation so we can swap them safely
+    $wtlPkgRegex = '<PackageReference Include="WebTemplateLibrary".*?/>'
+    $wtlProjRef  = '<ProjectReference Include="..\WebTemplateLibrary\WebTemplateLibrary.csproj" />'
+    $wtlProjRegex = '<ProjectReference Include="\.\.\\WebTemplateLibrary\\WebTemplateLibrary\.csproj".*?/>'
+    $wtlPkgRef   = '<PackageReference Include="WebTemplateLibrary" Version="1.0.0" />'
+
+    $wtrPkgRegex = '<PackageReference Include="WebTemplateRazorLibrary".*?/>'
+    $wtrProjRef  = '<ProjectReference Include="..\WebTemplateRazorLibrary\WebTemplateRazorLibrary.csproj" />'
+    $wtrProjRegex = '<ProjectReference Include="\.\.\\WebTemplateRazorLibrary\\WebTemplateRazorLibrary\.csproj".*?/>'
+    $wtrPkgRef   = '<PackageReference Include="WebTemplateRazorLibrary" Version="1.0.0" />'
+
+    $wttPkgRegex = '<PackageReference Include="WebTemplateTests".*?/>'
+    $wttProjRef  = '<ProjectReference Include="..\WebTemplateTests\WebTemplateTests.csproj" />'
+    $wttProjRegex = '<ProjectReference Include="\.\.\\WebTemplateTests\\WebTemplateTests\.csproj".*?/>'
+    $wttPkgRef   = '<PackageReference Include="WebTemplateTests" Version="1.0.0" />'
+
+
+    if ($DevBuild) {
+        Section "Configuring DEV Build (Direct References)"
+        Swap-References -FilePath $demoProjPath -FindRegex $wtlPkgRegex -Replace $wtlProjRef
+        Swap-References -FilePath $demoProjPath -FindRegex $wtrPkgRegex -Replace $wtrProjRef
+        Swap-References -FilePath $demoTestsProjPath -FindRegex $wttPkgRegex -Replace $wttProjRef
+    }
+
+    if ($ReleaseBuild) {
+        Section "Configuring RELEASE Build (Package References)"
+        Swap-References -FilePath $demoProjPath -FindRegex $wtlProjRegex -Replace $wtlPkgRef
+        Swap-References -FilePath $demoProjPath -FindRegex $wtrProjRegex -Replace $wtrPkgRef
+        Swap-References -FilePath $demoTestsProjPath -FindRegex $wttProjRegex -Replace $wttPkgRef
+    }
+
+    # ==========================================
+    # PACK & BUILD
+    # ==========================================
+
+    if (-not $DevBuild) {
+        Section "Pack -> local-nugget-feed/"
+        Exec "dotnet" @("pack", "WebTemplateLibrary.csproj", "-c", "Release", "-o", "local-nugget-feed")
+        Exec "dotnet" @("pack", "WebTemplateRazorLibrary\WebTemplateRazorLibrary.csproj", "-c", "Release", "-o", "local-nugget-feed")
+        Exec "dotnet" @("pack", "WebTemplateTests\WebTemplateTests.csproj", "-c", "Release", "-o", "local-nugget-feed")
+    } else {
+        Section "Pack Skipped (Dev Build)"
+    }
+
+    Section "Build"
+    Exec "dotnet" @("build")
+
+    if (-not $NoTest) {
+        Section "Test"
+        Exec "dotnet" @("test")
+    }
+
+    if (-not $NoPush) {
+        $commitMsg = Read-Host -Prompt "Enter SVN commit message"
+        cd ..
+        svn status | ForEach-Object { if ($_ -match '^\?\s+(.*)$') { svn add $matches[1] } elseif ($_ -match '^!\s+(.*)$') { svn delete $matches[1] } }
+
+        Write-Host "Committing... " -ForegroundColor Cyan
+        Exec -Cmd "svn" -Arguments @('commit', '-m', $commitMsg)
+
+        Write-Host "SVN commit completed." -ForegroundColor Cyan
+        cd Source
+
+        Section "Done"
+        $feedPath = (Resolve-Path $ArtifactsDir).Path
+        Write-Host "Packages available in: $feedPath" -ForegroundColor Green
+        exit 0
+    }
+}
+catch {
+    Write-Error $_.Exception.Message
+    exit 1
+}
