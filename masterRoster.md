@@ -282,146 +282,152 @@ social media
 
 
 
+$targetFolder = "."
+$mdFiles = Get-ChildItem -Path $targetFolder -Filter "*.md" -Recurse
+$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 
+Write-Host "Target Folder: $($targetFolder)"
+Write-Host "Found $($mdFiles.Count) markdown files"
 
-[CmdletBinding()]
-param(
-    # The folder containing your markdown files
-    [string]$TargetFolder = "."
-)
+# Note: Adjusted [^]* to [^"]* for .NET regex compatibility
+$pattern = ''
 
-$mdFiles = Get-ChildItem -Path $TargetFolder -Filter "*.md" -Recurse -File
-
-foreach ($file in $mdFiles) {
-    $content = Get-Content $file.FullName -Raw
+foreach($file in $mdFiles) {
+    $lines = Get-Content -Path $file.FullName -Encoding UTF8
+    $yamlBlock = @()
+    $bodyLines = @()
     
-    if ([string]::IsNullOrWhiteSpace($content)) { continue }
-
-    # 1. Initialize metadata storage
-    $metadata = @{
-        Template = ""
-        Title = ""
-        MetaDescription = ""
-        MetaKeywords = ""
-    }
+    $parsingMetadata = $true
+    $metadataFound = $false
+    
+    # State variables for SideNav parsing
+    $inSideNav = $false
     $sideNavTitle = ""
     $sideNavItems = @()
+    $currentParent = $null
 
-    # 2. Extract Top-Level Metadata
-    if ($content -match '') { $metadata.Template = $matches[1] }
-    if ($content -match '') { $metadata.Title = $matches[1] }
-    if ($content -match '') { $metadata.MetaDescription = $matches[1] }
-    if ($content -match '') { $metadata.MetaKeywords = $matches[1] }
+    foreach($line in $lines) {
+        
+        # --- 1. Top Metadata Parsing ---
+        if ($parsingMetadata) {
+            if ($line -match $pattern) {
+                $key = $matches['key']
+                $val = $matches['value']
+                $yamlBlock += "$($key): `"$val`""
+                $metadataFound = $true
+                continue
+            }
+            elseif ([string]::IsNullOrWhiteSpace($line)) {
+                continue
+            }
+            else {
+                $parsingMetadata = $false
+                # We do NOT use 'continue' here so this first non-metadata line falls into the body parsing below
+            }
+        }
 
-    # 3. Extract and Parse SideNav
-    if ($content -match '(?s)(.*?)') {
-        $sideNavRaw = $matches[1] -split '\r?\n'
-        $currentParent = $null
+        # --- 2. Body & SideNav Parsing ---
+        if (-not $parsingMetadata) {
+            
+            # Toggle SideNav State
+            if ($line -match '') {
+                $inSideNav = $true
+                continue
+            }
+            if ($line -match '') {
+                $inSideNav = $false
+                continue
+            }
 
-        foreach ($line in $sideNavRaw) {
-            # Skip empty lines and inner HTML comments (like )
-            if ([string]::IsNullOrWhiteSpace($line) -or $line -match '') { continue }
+            # Process inside SideNav
+            if ($inSideNav) {
+                # Skip empty lines or pure html comments (like )
+                if ([string]::IsNullOrWhiteSpace($line) -or $line -match '') { continue }
 
-            # Match Headings (We grab the last matched heading as the title)
-            # Regex: Matches #### *Heading* or #### Heading
-            if ($line -match '^#{1,6}\s*\*+([^*]+)\*+' -or $line -match '^#{1,6}\s*(.*)') {
-                $potentialTitle = $matches[1].Trim()
-                # Optional: Ignore common structural headings like "On this page"
-                if ($potentialTitle -notmatch '(?i)On this page') {
-                    $sideNavTitle = $potentialTitle
+                # Match Title
+                if ($line -match '^#{1,6}\s*\*+([^*]+)\*+' -or $line -match '^#{1,6}\s*(.*)') {
+                    $potentialTitle = $matches[1].Trim()
+                    if ($potentialTitle -notmatch '(?i)On this page') {
+                        $sideNavTitle = $potentialTitle
+                    }
                 }
-                continue
-            }
-
-            # Match Top-Level Item WITHOUT a URL: -Link 1
-            if ($line -match '^-\s*(?!\[)(.*)$') {
-                $currentParent = @{ label = $matches[1].Trim(); url = ""; sublinks = @() }
-                $sideNavItems += $currentParent
-                continue
-            }
-
-            # Match Top-Level Item WITH a URL: -[Link 2](/)
-            if ($line -match '^-\s*\[(.*?)\]\((.*?)\)$') {
-                $currentParent = @{ label = $matches[1].Trim(); url = $matches[2].Trim(); sublinks = @() }
-                $sideNavItems += $currentParent
-                continue
-            }
-
-            # Match Sub-link (Requires leading whitespace):   - [Sublink 1](/)
-            if ($line -match '^[ \t]+-\s*\[(.*?)\]\((.*?)\)$') {
-                if ($currentParent -ne $null) {
-                    $currentParent.sublinks += @{ label = $matches[1].Trim(); url = $matches[2].Trim() }
+                # Match Link Parent WITHOUT URL: -Link 1
+                elseif ($line -match '^-\s*(?!\[)(.*)$') {
+                    $currentParent = @{ label = $matches[1].Trim(); url = ""; sublinks = @() }
+                    $sideNavItems += $currentParent
                 }
+                # Match Link Parent WITH URL: -[Link 2](/)
+                elseif ($line -match '^-\s*\[(.*?)\]\((.*?)\)$') {
+                    $currentParent = @{ label = $matches[1].Trim(); url = $matches[2].Trim(); sublinks = @() }
+                    $sideNavItems += $currentParent
+                }
+                # Match Sublink:   - [Sublink 1](/)
+                elseif ($line -match '^[ \t]+-\s*\[(.*?)\]\((.*?)\)$') {
+                    if ($currentParent -ne $null) {
+                        $currentParent.sublinks += @{ label = $matches[1].Trim(); url = $matches[2].Trim() }
+                    }
+                }
+                continue # Do not add SideNav lines to the final body lines
+            }
+
+            # Process Normal Body (Scrubbing specific structural tags)
+            if ($line -match '' -or 
+                $line -match '' -or 
+                $line -match '' -or 
+                $line -match '') {
                 continue
             }
+
+            # Clean any inline html comments from the line
+            $cleanedLine = $line -replace '', ''
+            
+            # If the line was ONLY a comment and is now completely empty, skip it
+            if ([string]::IsNullOrWhiteSpace($cleanedLine) -and -not [string]::IsNullOrWhiteSpace($line)) {
+                continue
+            }
+
+            $bodyLines += $cleanedLine
         }
     }
 
-    # 4. Generate YAML Frontmatter
-    $yamlLines = @("---")
-    
-    if ($metadata.Template) { $yamlLines += "Template: ""$($metadata.Template)""" }
-    if ($metadata.Title) { $yamlLines += "Title: ""$($metadata.Title)""" }
-    if ($metadata.MetaDescription) { $yamlLines += "MetaDescription: ""$($metadata.MetaDescription)""" }
-    if ($metadata.MetaKeywords) { $yamlLines += "MetaKeywords: ""$($metadata.MetaKeywords)""" }
-
+    # --- 3. Append the SideNav YAML ---
     if ($sideNavItems.Count -gt 0) {
-        $yamlLines += "sidenav_title: ""$sideNavTitle"""
-        $yamlLines += "sidenav_items:"
-        
+        $yamlBlock += "sidenav_title: `"$sideNavTitle`""
+        $yamlBlock += "sidenav_items:"
         foreach ($item in $sideNavItems) {
-            $yamlLines += "  - label: ""$($item.label)"""
-            if ($item.url) {
-                $yamlLines += "    url: ""$($item.url)"""
-            }
+            $yamlBlock += "  - label: `"$($item.label)`""
+            if ($item.url) { $yamlBlock += "    url: `"$($item.url)`"" }
+            
             if ($item.sublinks.Count -gt 0) {
-                $yamlLines += "    sublinks:"
+                $yamlBlock += "    sublinks:"
                 foreach ($sub in $item.sublinks) {
-                    $yamlLines += "      - label: ""$($sub.label)"""
-                    $yamlLines += "        url: ""$($sub.url)"""
+                    $yamlBlock += "      - label: `"$($sub.label)`""
+                    $yamlBlock += "        url: `"$($sub.url)`""
                 }
             } else {
-                $yamlLines += "    sublinks: []"
+                $yamlBlock += "    sublinks: []"
             }
         }
+        $metadataFound = $true
     }
-    $yamlLines += "---"
-    $yamlLines += "" # Add a blank line after the YAML block
-    
-    $yamlString = $yamlLines -join "`n"
 
-    # 5. Scrub the Original Content
-    
-    # Target and remove specific multi-line blocks first
-    $content = $content -replace '(?s).*?', ''
-    $content = $content -replace '(?s).*?', ''
-    
-    # Remove the wrapper tags
-    $content = $content -replace '', ''
-    $content = $content -replace '', ''
-    
-    # Now that we've extracted data, nuke ALL remaining HTML comments globally
-    $content = $content -replace '(?s)', ''
-    
-    # Trim leading whitespace/newlines left behind by the deleted tags
-    $content = $content.TrimStart()
+    # --- 4. Write File ---
+    if ($metadataFound) {
+        # Re-join the body lines. 
+        # Add a final regex pass just in case an HTML comment was split across multiple lines.
+        $finalBodyText = ($bodyLines -join "`r`n") -replace '(?s)', ''
+        
+        $newContent = @()
+        $newContent += "---"
+        $newContent += $yamlBlock
+        $newContent += "---"
+        $newContent += ""
+        $newContent += $finalBodyText.TrimStart()
 
-    # 6. Rebuild and Save the File
-    # If the file didn't have any metadata or sidenav, we skip adding empty YAML
-    if ($yamlLines.Count -gt 3) {
-        $finalContent = $yamlString + $content
-        Set-Content -Path $file.FullName -Value $finalContent -Encoding UTF8
-        Write-Host "Converted: $($file.Name)" -ForegroundColor Green
-    } else {
-        # Even if there was no YAML, save it to apply the scrubbing
-        Set-Content -Path $file.FullName -Value $content -Encoding UTF8
-        Write-Host "Scrubbed (No YAML needed): $($file.Name)" -ForegroundColor DarkGray
+        [System.IO.File]::WriteAllLines($file.FullName, $newContent, $utf8NoBom)
+        Write-Host "updated $($file.FullName)" -ForegroundColor Green
     }
 }
-
-Write-Host "Migration complete!" -ForegroundColor Cyan
-
-
 
 
 
