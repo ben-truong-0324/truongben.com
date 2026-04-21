@@ -289,7 +289,6 @@ $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 Write-Host "Target Folder: $($targetFolder)"
 Write-Host "Found $($mdFiles.Count) markdown files"
 
-# Note: Adjusted [^]* to [^"]* for .NET regex compatibility
 $pattern = ''
 
 foreach($file in $mdFiles) {
@@ -300,7 +299,6 @@ foreach($file in $mdFiles) {
     $parsingMetadata = $true
     $metadataFound = $false
     
-    # State variables for SideNav parsing
     $inSideNav = $false
     $sideNavTitle = ""
     $sideNavItems = @()
@@ -318,11 +316,11 @@ foreach($file in $mdFiles) {
                 continue
             }
             elseif ([string]::IsNullOrWhiteSpace($line)) {
+                # Skip blank lines at the very top of the file
                 continue
             }
             else {
                 $parsingMetadata = $false
-                # We do NOT use 'continue' here so this first non-metadata line falls into the body parsing below
             }
         }
 
@@ -330,47 +328,43 @@ foreach($file in $mdFiles) {
         if (-not $parsingMetadata) {
             
             # Toggle SideNav State
-            if ($line -match '') {
-                $inSideNav = $true
-                continue
-            }
-            if ($line -match '') {
+            if ($line -match '') { $inSideNav = $true; continue }
+            if ($line -match '') { $inSideNav = $false; continue }
+
+            # Safety Catch: If EndSideNav was missing, force it off when we hit Content
+            if ($inSideNav -and $line -match '') {
                 $inSideNav = $false
-                continue
             }
 
             # Process inside SideNav
             if ($inSideNav) {
-                # Skip empty lines or pure html comments (like )
                 if ([string]::IsNullOrWhiteSpace($line) -or $line -match '') { continue }
 
-                # Match Title
                 if ($line -match '^#{1,6}\s*\*+([^*]+)\*+' -or $line -match '^#{1,6}\s*(.*)') {
                     $potentialTitle = $matches[1].Trim()
                     if ($potentialTitle -notmatch '(?i)On this page') {
                         $sideNavTitle = $potentialTitle
                     }
                 }
-                # Match Link Parent WITHOUT URL: -Link 1
                 elseif ($line -match '^-\s*(?!\[)(.*)$') {
                     $currentParent = @{ label = $matches[1].Trim(); url = ""; sublinks = @() }
                     $sideNavItems += $currentParent
                 }
-                # Match Link Parent WITH URL: -[Link 2](/)
                 elseif ($line -match '^-\s*\[(.*?)\]\((.*?)\)$') {
                     $currentParent = @{ label = $matches[1].Trim(); url = $matches[2].Trim(); sublinks = @() }
                     $sideNavItems += $currentParent
                 }
-                # Match Sublink:   - [Sublink 1](/)
                 elseif ($line -match '^[ \t]+-\s*\[(.*?)\]\((.*?)\)$') {
                     if ($currentParent -ne $null) {
                         $currentParent.sublinks += @{ label = $matches[1].Trim(); url = $matches[2].Trim() }
                     }
                 }
-                continue # Do not add SideNav lines to the final body lines
+                continue # Don't add SideNav text to the final body
             }
 
-            # Process Normal Body (Scrubbing specific structural tags)
+            # Process Normal Body
+            
+            # 1. Skip structural tags entirely
             if ($line -match '' -or 
                 $line -match '' -or 
                 $line -match '' -or 
@@ -378,14 +372,15 @@ foreach($file in $mdFiles) {
                 continue
             }
 
-            # Clean any inline html comments from the line
+            # 2. Clean inline html comments safely (single line only)
             $cleanedLine = $line -replace '', ''
             
-            # If the line was ONLY a comment and is now completely empty, skip it
+            # 3. If removing the comment made the line empty, skip it (but preserve normal markdown blank lines)
             if ([string]::IsNullOrWhiteSpace($cleanedLine) -and -not [string]::IsNullOrWhiteSpace($line)) {
                 continue
             }
 
+            # Append to array exactly as is, preserving markdown indentation
             $bodyLines += $cleanedLine
         }
     }
@@ -413,21 +408,23 @@ foreach($file in $mdFiles) {
 
     # --- 4. Write File ---
     if ($metadataFound) {
-        # Re-join the body lines. 
-        # Add a final regex pass just in case an HTML comment was split across multiple lines.
-        $finalBodyText = ($bodyLines -join "`r`n") -replace '(?s)', ''
-        
+        # Keep everything as an array to safely write lines without manipulating string blocks
         $newContent = @()
         $newContent += "---"
         $newContent += $yamlBlock
         $newContent += "---"
         $newContent += ""
-        $newContent += $finalBodyText.TrimStart()
+        $newContent += $bodyLines
 
         [System.IO.File]::WriteAllLines($file.FullName, $newContent, $utf8NoBom)
         Write-Host "updated $($file.FullName)" -ForegroundColor Green
     }
 }
+
+
+
+
+
 
 
 
