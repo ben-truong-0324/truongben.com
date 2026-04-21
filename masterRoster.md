@@ -275,138 +275,243 @@ Mrakdig custom reneder / Model logic to override html wrapper before output
 tab, card, button, block quote, modal, countdowntimer, steplist, timelnie , featured card
 social media
 
-[CmdletBinding()]
-param(
-    [switch]$DevBuild,
-    [switch]$ReleaseBuild,
-    [Parameter(Mandatory = $false, Position = 0)]
-    [switch]$NoPush,
-    [switch]$NoTest
-)
 
-if ($args -contains '--no-push') { $NoPush = $true }
-if ($args -contains '--no-test') { $NoTest = $true }
-if ($args -contains '--dev-build') { $DevBuild = $true }
-if ($args -contains '--release-build') { $ReleaseBuild = $true }
 
-if ($DevBuild -and $ReleaseBuild) {
-    Write-Error "Cannot specify both DevBuild and ReleaseBuild. Choose one."
-    exit 1
-}
 
-$ArtifactsDir = "local-nugget-feed"
 
-$CleanPath1 = "$HOME/.nugget/packages/webtemplatelibrary"
-$CleanPath2 = "$HOME/.nugget/packages/webtemplaterazorlibrary"
-$CleanPath3 = "$HOME/.nugget/packages/webtemplates"
 
-# Demo Project Paths
-$demoProjPath = "WebTemplateDemo\WebTemplateDemo.csproj"
-$demoTestsProjPath = "WebTemplateDemoTests\WebTemplateDemoTests.csproj"
 
-Set-StrictMode -Version Latest
-$ErrorActionPreference = 'Stop'
-
-function Section([string]$Name) {
-    Write-Host "`n== $Name ===" -ForegroundColor Cyan
-}
-
-function Exec {
-    param(
-    [Parameter(Mandatory = $true)]
-    [string]$Cmd,
-
-    [Parameter()]
-    [string[]]$Arguments = @()
-    )
-
-    $render = "$Cmd " + $($Arguments -join ' ')
-    Write-Host "> $render" -ForegroundColor DarkGray
-
-    & $Cmd @Arguments
-
-    if ($LASTEXITCODE -ne 0) {
-        throw "Command failed with exit code $LASTEXITCODE"
-    }
-}
-
-function Ensure-Dir([String]$path) {
-    if (-not (Test-Path $path)) {
-        New-Item -ItemType Directory -Path $path | Out-Null
-    }
-}
-
-# Helper function to swap Project/Package references in csproj
-function Swap-References {
-    param([string]$FilePath, [string]$FindRegex, [string]$Replace)
-    
-    if (Test-Path $FilePath) {
-        $content = Get-Content $FilePath -Raw
-        if ($content -match $FindRegex) {
-            $content = $content -replace $FindRegex, $Replace
-            Set-Content -Path $FilePath -Value $content -NoNewline
-            Write-Host "  Updated $FilePath" -ForegroundColor DarkGray
-        }
-    } else {
-        Write-Warning "Could not find file to swap references: $FilePath"
-    }
-}
 
 
 
 [CmdletBinding()]
 param(
-    # The folder to scan (defaults to the current directory)
-    [string]$TargetFolder = ".",
-    # Where to save the output file
-    [string]$OutputFile = ".\GeneratedDemoTests.cs"
+    # The folder containing your markdown files
+    [string]$TargetFolder = "."
 )
 
-# Grab all .cs files in the target folder and its subfolders
-$csFiles = Get-ChildItem -Path $TargetFolder -Filter "*.cs" -Recurse -File
+$mdFiles = Get-ChildItem -Path $TargetFolder -Filter "*.md" -Recurse -File
 
-# Regex explanation:
-# \[TestClass(?:\(\))?\] -> Matches [TestClass] or [TestClass()]
-# \s* -> Matches any whitespace or newlines between the attribute and the class
-# (?:(?:...)\s+)* -> Matches access modifiers like 'public', 'internal', 'partial', 'sealed'
-# class\s+(\w+)          -> Matches the word 'class', followed by spaces, and captures the ClassName
-$regex = '\[TestClass(?:\(\))?\]\s*(?:(?:public|internal|sealed|partial)\s+)*class\s+(\w+)'
-
-$outputLines = @()
-
-foreach ($file in $csFiles) {
-    # Read the entire file as one string so our Regex can match across newlines
+foreach ($file in $mdFiles) {
     $content = Get-Content $file.FullName -Raw
     
     if ([string]::IsNullOrWhiteSpace($content)) { continue }
 
-    $matches = [regex]::Matches($content, $regex)
+    # 1. Initialize metadata storage
+    $metadata = @{
+        Template = ""
+        Title = ""
+        MetaDescription = ""
+        MetaKeywords = ""
+    }
+    $sideNavTitle = ""
+    $sideNavItems = @()
+
+    # 2. Extract Top-Level Metadata
+    if ($content -match '') { $metadata.Template = $matches[1] }
+    if ($content -match '') { $metadata.Title = $matches[1] }
+    if ($content -match '') { $metadata.MetaDescription = $matches[1] }
+    if ($content -match '') { $metadata.MetaKeywords = $matches[1] }
+
+    # 3. Extract and Parse SideNav
+    if ($content -match '(?s)(.*?)') {
+        $sideNavRaw = $matches[1] -split '\r?\n'
+        $currentParent = $null
+
+        foreach ($line in $sideNavRaw) {
+            # Skip empty lines and inner HTML comments (like )
+            if ([string]::IsNullOrWhiteSpace($line) -or $line -match '') { continue }
+
+            # Match Headings (We grab the last matched heading as the title)
+            # Regex: Matches #### *Heading* or #### Heading
+            if ($line -match '^#{1,6}\s*\*+([^*]+)\*+' -or $line -match '^#{1,6}\s*(.*)') {
+                $potentialTitle = $matches[1].Trim()
+                # Optional: Ignore common structural headings like "On this page"
+                if ($potentialTitle -notmatch '(?i)On this page') {
+                    $sideNavTitle = $potentialTitle
+                }
+                continue
+            }
+
+            # Match Top-Level Item WITHOUT a URL: -Link 1
+            if ($line -match '^-\s*(?!\[)(.*)$') {
+                $currentParent = @{ label = $matches[1].Trim(); url = ""; sublinks = @() }
+                $sideNavItems += $currentParent
+                continue
+            }
+
+            # Match Top-Level Item WITH a URL: -[Link 2](/)
+            if ($line -match '^-\s*\[(.*?)\]\((.*?)\)$') {
+                $currentParent = @{ label = $matches[1].Trim(); url = $matches[2].Trim(); sublinks = @() }
+                $sideNavItems += $currentParent
+                continue
+            }
+
+            # Match Sub-link (Requires leading whitespace):   - [Sublink 1](/)
+            if ($line -match '^[ \t]+-\s*\[(.*?)\]\((.*?)\)$') {
+                if ($currentParent -ne $null) {
+                    $currentParent.sublinks += @{ label = $matches[1].Trim(); url = $matches[2].Trim() }
+                }
+                continue
+            }
+        }
+    }
+
+    # 4. Generate YAML Frontmatter
+    $yamlLines = @("---")
     
-    foreach ($match in $matches) {
-        $className = $match.Groups[1].Value
+    if ($metadata.Template) { $yamlLines += "Template: ""$($metadata.Template)""" }
+    if ($metadata.Title) { $yamlLines += "Title: ""$($metadata.Title)""" }
+    if ($metadata.MetaDescription) { $yamlLines += "MetaDescription: ""$($metadata.MetaDescription)""" }
+    if ($metadata.MetaKeywords) { $yamlLines += "MetaKeywords: ""$($metadata.MetaKeywords)""" }
+
+    if ($sideNavItems.Count -gt 0) {
+        $yamlLines += "sidenav_title: ""$sideNavTitle"""
+        $yamlLines += "sidenav_items:"
         
-        $outputLines += "[TestClass]"
-        $outputLines += "public class DemoApp_$className : $className"
-        $outputLines += "{ }"
-        $outputLines += "" # Blank line for readability
+        foreach ($item in $sideNavItems) {
+            $yamlLines += "  - label: ""$($item.label)"""
+            if ($item.url) {
+                $yamlLines += "    url: ""$($item.url)"""
+            }
+            if ($item.sublinks.Count -gt 0) {
+                $yamlLines += "    sublinks:"
+                foreach ($sub in $item.sublinks) {
+                    $yamlLines += "      - label: ""$($sub.label)"""
+                    $yamlLines += "        url: ""$($sub.url)"""
+                }
+            } else {
+                $yamlLines += "    sublinks: []"
+            }
+        }
+    }
+    $yamlLines += "---"
+    $yamlLines += "" # Add a blank line after the YAML block
+    
+    $yamlString = $yamlLines -join "`n"
+
+    # 5. Scrub the Original Content
+    
+    # Target and remove specific multi-line blocks first
+    $content = $content -replace '(?s).*?', ''
+    $content = $content -replace '(?s).*?', ''
+    
+    # Remove the wrapper tags
+    $content = $content -replace '', ''
+    $content = $content -replace '', ''
+    
+    # Now that we've extracted data, nuke ALL remaining HTML comments globally
+    $content = $content -replace '(?s)', ''
+    
+    # Trim leading whitespace/newlines left behind by the deleted tags
+    $content = $content.TrimStart()
+
+    # 6. Rebuild and Save the File
+    # If the file didn't have any metadata or sidenav, we skip adding empty YAML
+    if ($yamlLines.Count -gt 3) {
+        $finalContent = $yamlString + $content
+        Set-Content -Path $file.FullName -Value $finalContent -Encoding UTF8
+        Write-Host "Converted: $($file.Name)" -ForegroundColor Green
+    } else {
+        # Even if there was no YAML, save it to apply the scrubbing
+        Set-Content -Path $file.FullName -Value $content -Encoding UTF8
+        Write-Host "Scrubbed (No YAML needed): $($file.Name)" -ForegroundColor DarkGray
     }
 }
 
-# Write the output to a file and the console
-if ($outputLines.Count -gt 0) {
-    $outputLines | Out-File -FilePath $OutputFile -Encoding utf8
-    
-    $classCount = $outputLines.Count / 4
-    Write-Host "Success! Generated $classCount wrapper classes." -ForegroundColor Green
-    Write-Host "Output saved to: $(Resolve-Path $OutputFile)" -ForegroundColor Cyan
-    
-    # Optional: Print a preview to the console
-    Write-Host "`nPreview of the first generated class:" -ForegroundColor DarkGray
-    $outputLines[0..3] | ForEach-Object { Write-Host "  $_" -ForegroundColor DarkGray }
-} else {
-    Write-Host "No [TestClass] definitions found in the specified folder ($TargetFolder)." -ForegroundColor Yellow
+Write-Host "Migration complete!" -ForegroundColor Cyan
+
+
+
+
+
+
+
+---
+sidenav_title: "Documentation & Resources"
+sidenav_items:
+  - label: "Getting Started"
+    sublinks:
+      - label: "Installation Guide"
+        url: "/docs/install"
+      - label: "Configuration"
+        url: "/docs/config"
+      - label: "Quickstart Tutorial"
+        url: "/docs/quickstart"
+
+  - label: "API Reference"
+    sublinks:
+      - label: "Authentication"
+        url: "/api/auth"
+      - label: "Endpoints"
+        url: "/api/endpoints"
+
+  - label: "Troubleshooting"
+    sublinks:
+      - label: "Common Errors"
+        url: "/docs/errors"
+      - label: "Contact Support"
+        url: "/support"
+---
+
+# Your actual markdown content starts down here...
+
+2. The C# Classes to Deserialize It
+
+To make the code from the previous step work with this nested structure, your C# models need to mirror the YAML hierarchy exactly. Because we told YamlDotNet to use the UnderscoredNamingConvention, it will automatically map sidenav_title in YAML to SidenavTitle in C#.
+C#
+
+public class SideNavMetadata
+{
+    public string SidenavTitle { get; set; }
+    public List<SideNavItem> SidenavItems { get; set; }
 }
 
+public class SideNavItem
+{
+    public string Label { get; set; }
+    
+    // This holds the nested array of sublinks for this specific parent
+    public List<SideNavSublink> Sublinks { get; set; } 
+}
 
+public class SideNavSublink
+{
+    public string Label { get; set; }
+    public string Url { get; set; }
+}
 
-.\Scrape-Tests.ps1 -TargetFolder ".\WebTemplateDemoTests" -OutputFile ".\DemoAppTests.cs"
+3. How to Render It (Razor Example)
+
+Once you pass that SideNavMetadata object to your Razor view, generating the HTML menu is as simple as a nested foreach loop:
+HTML
+
+@model SideNavMetadata
+
+@if (Model != null)
+{
+    <nav class="sidebar">
+        <h3>@Model.SidenavTitle</h3>
+        
+        <ul>
+            @foreach (var parent in Model.SidenavItems)
+            {
+                <li class="nav-parent-item">
+                    <strong>@parent.Label</strong>
+                    
+                    @if (parent.Sublinks != null && parent.Sublinks.Any())
+                    {
+                        <ul class="nav-sublinks">
+                            @foreach (var child in parent.Sublinks)
+                            {
+                                <li>
+                                    <a href="@child.Url">@child.Label</a>
+                                </li>
+                            }
+                        </ul>
+                    }
+                </li>
+            }
+        </ul>
+    </nav>
+}
