@@ -352,103 +352,61 @@ function Swap-References {
     }
 }
 
-try {
-    Section "Clean"
-    Exec "dotnet" @("clean")
 
-    if ($CleanPath1 -and (Test-Path $CleanPath1)) {
-        Write-Host "Removing $CleanPath1" -ForegroundColor Gray
-        Remove-Item -Path $CleanPath1 -Recurse -Force
-    }
 
-    if ($CleanPath2 -and (Test-Path $CleanPath2)) {
-        Write-Host "Removing $CleanPath2" -ForegroundColor Gray
-        Remove-Item -Path $CleanPath2 -Recurse -Force
-    }
+[CmdletBinding()]
+param(
+    # The folder to scan (defaults to the current directory)
+    [string]$TargetFolder = ".",
+    # Where to save the output file
+    [string]$OutputFile = ".\GeneratedDemoTests.cs"
+)
 
-    if ($CleanPath3 -and (Test-Path $CleanPath3)) {
-        Write-Host "Removing $CleanPath3" -ForegroundColor Gray
-        Remove-Item -Path $CleanPath3 -Recurse -Force
-    }
+# Grab all .cs files in the target folder and its subfolders
+$csFiles = Get-ChildItem -Path $TargetFolder -Filter "*.cs" -Recurse -File
 
-    Ensure-Dir $ArtifactsDir
-    Write-Host "Cleaning $ArtifactsDir/" -ForegroundColor Gray
-    Remove-Item -Path (Join-Path $ArtifactsDir "*") -Recurse -Force
+# Regex explanation:
+# \[TestClass(?:\(\))?\] -> Matches [TestClass] or [TestClass()]
+# \s* -> Matches any whitespace or newlines between the attribute and the class
+# (?:(?:...)\s+)* -> Matches access modifiers like 'public', 'internal', 'partial', 'sealed'
+# class\s+(\w+)          -> Matches the word 'class', followed by spaces, and captures the ClassName
+$regex = '\[TestClass(?:\(\))?\]\s*(?:(?:public|internal|sealed|partial)\s+)*class\s+(\w+)'
 
-    # ==========================================
-    # DEV / RELEASE BUILD LOGIC
-    # ==========================================
+$outputLines = @()
+
+foreach ($file in $csFiles) {
+    # Read the entire file as one string so our Regex can match across newlines
+    $content = Get-Content $file.FullName -Raw
     
-    # Regex patterns to find either variation so we can swap them safely
-    $wtlPkgRegex = '<PackageReference Include="WebTemplateLibrary".*?/>'
-    $wtlProjRef  = '<ProjectReference Include="..\WebTemplateLibrary\WebTemplateLibrary.csproj" />'
-    $wtlProjRegex = '<ProjectReference Include="\.\.\\WebTemplateLibrary\\WebTemplateLibrary\.csproj".*?/>'
-    $wtlPkgRef   = '<PackageReference Include="WebTemplateLibrary" Version="1.0.0" />'
+    if ([string]::IsNullOrWhiteSpace($content)) { continue }
 
-    $wtrPkgRegex = '<PackageReference Include="WebTemplateRazorLibrary".*?/>'
-    $wtrProjRef  = '<ProjectReference Include="..\WebTemplateRazorLibrary\WebTemplateRazorLibrary.csproj" />'
-    $wtrProjRegex = '<ProjectReference Include="\.\.\\WebTemplateRazorLibrary\\WebTemplateRazorLibrary\.csproj".*?/>'
-    $wtrPkgRef   = '<PackageReference Include="WebTemplateRazorLibrary" Version="1.0.0" />'
-
-    $wttPkgRegex = '<PackageReference Include="WebTemplateTests".*?/>'
-    $wttProjRef  = '<ProjectReference Include="..\WebTemplateTests\WebTemplateTests.csproj" />'
-    $wttProjRegex = '<ProjectReference Include="\.\.\\WebTemplateTests\\WebTemplateTests\.csproj".*?/>'
-    $wttPkgRef   = '<PackageReference Include="WebTemplateTests" Version="1.0.0" />'
-
-
-    if ($DevBuild) {
-        Section "Configuring DEV Build (Direct References)"
-        Swap-References -FilePath $demoProjPath -FindRegex $wtlPkgRegex -Replace $wtlProjRef
-        Swap-References -FilePath $demoProjPath -FindRegex $wtrPkgRegex -Replace $wtrProjRef
-        Swap-References -FilePath $demoTestsProjPath -FindRegex $wttPkgRegex -Replace $wttProjRef
-    }
-
-    if ($ReleaseBuild) {
-        Section "Configuring RELEASE Build (Package References)"
-        Swap-References -FilePath $demoProjPath -FindRegex $wtlProjRegex -Replace $wtlPkgRef
-        Swap-References -FilePath $demoProjPath -FindRegex $wtrProjRegex -Replace $wtrPkgRef
-        Swap-References -FilePath $demoTestsProjPath -FindRegex $wttProjRegex -Replace $wttPkgRef
-    }
-
-    # ==========================================
-    # PACK & BUILD
-    # ==========================================
-
-    if (-not $DevBuild) {
-        Section "Pack -> local-nugget-feed/"
-        Exec "dotnet" @("pack", "WebTemplateLibrary.csproj", "-c", "Release", "-o", "local-nugget-feed")
-        Exec "dotnet" @("pack", "WebTemplateRazorLibrary\WebTemplateRazorLibrary.csproj", "-c", "Release", "-o", "local-nugget-feed")
-        Exec "dotnet" @("pack", "WebTemplateTests\WebTemplateTests.csproj", "-c", "Release", "-o", "local-nugget-feed")
-    } else {
-        Section "Pack Skipped (Dev Build)"
-    }
-
-    Section "Build"
-    Exec "dotnet" @("build")
-
-    if (-not $NoTest) {
-        Section "Test"
-        Exec "dotnet" @("test")
-    }
-
-    if (-not $NoPush) {
-        $commitMsg = Read-Host -Prompt "Enter SVN commit message"
-        cd ..
-        svn status | ForEach-Object { if ($_ -match '^\?\s+(.*)$') { svn add $matches[1] } elseif ($_ -match '^!\s+(.*)$') { svn delete $matches[1] } }
-
-        Write-Host "Committing... " -ForegroundColor Cyan
-        Exec -Cmd "svn" -Arguments @('commit', '-m', $commitMsg)
-
-        Write-Host "SVN commit completed." -ForegroundColor Cyan
-        cd Source
-
-        Section "Done"
-        $feedPath = (Resolve-Path $ArtifactsDir).Path
-        Write-Host "Packages available in: $feedPath" -ForegroundColor Green
-        exit 0
+    $matches = [regex]::Matches($content, $regex)
+    
+    foreach ($match in $matches) {
+        $className = $match.Groups[1].Value
+        
+        $outputLines += "[TestClass]"
+        $outputLines += "public class DemoApp_$className : $className"
+        $outputLines += "{ }"
+        $outputLines += "" # Blank line for readability
     }
 }
-catch {
-    Write-Error $_.Exception.Message
-    exit 1
+
+# Write the output to a file and the console
+if ($outputLines.Count -gt 0) {
+    $outputLines | Out-File -FilePath $OutputFile -Encoding utf8
+    
+    $classCount = $outputLines.Count / 4
+    Write-Host "Success! Generated $classCount wrapper classes." -ForegroundColor Green
+    Write-Host "Output saved to: $(Resolve-Path $OutputFile)" -ForegroundColor Cyan
+    
+    # Optional: Print a preview to the console
+    Write-Host "`nPreview of the first generated class:" -ForegroundColor DarkGray
+    $outputLines[0..3] | ForEach-Object { Write-Host "  $_" -ForegroundColor DarkGray }
+} else {
+    Write-Host "No [TestClass] definitions found in the specified folder ($TargetFolder)." -ForegroundColor Yellow
 }
+
+
+
+.\Scrape-Tests.ps1 -TargetFolder ".\WebTemplateDemoTests" -OutputFile ".\DemoAppTests.cs"
