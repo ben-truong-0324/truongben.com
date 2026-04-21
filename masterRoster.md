@@ -281,7 +281,6 @@ social media
 
 
 
-
 $targetFolder = "."
 $mdFiles = Get-ChildItem -Path $targetFolder -Filter "*.md" -Recurse
 $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
@@ -289,135 +288,186 @@ $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 Write-Host "Target Folder: $($targetFolder)"
 Write-Host "Found $($mdFiles.Count) markdown files"
 
-$pattern = ''
-
 foreach($file in $mdFiles) {
-    $lines = Get-Content -Path $file.FullName -Encoding UTF8
-    $yamlBlock = @()
-    $bodyLines = @()
+    $originalContent = Get-Content -Path $file.FullName -Encoding UTF8 -Raw
+    $lines = $originalContent -split "`r?`n"
     
-    $parsingMetadata = $true
-    $metadataFound = $false
+    $metadata = @{}  # Store key-value pairs from <!--key="value"-->
+    $bodyLines = @()
     
     $inSideNav = $false
     $sideNavTitle = ""
     $sideNavItems = @()
     $currentParent = $null
+    $inContent = $false
 
-    foreach($line in $lines) {
+    for ($i = 0; $i -lt $lines.Count; $i++) {
+        $line = $lines[$i]
         
-        # --- 1. Top Metadata Parsing ---
-        if ($parsingMetadata) {
-            if ($line -match $pattern) {
-                $key = $matches['key']
-                $val = $matches['value']
-                $yamlBlock += "$($key): `"$val`""
-                $metadataFound = $true
-                continue
-            }
-            elseif ([string]::IsNullOrWhiteSpace($line)) {
-                # Skip blank lines at the very top of the file
-                continue
-            }
-            else {
-                $parsingMetadata = $false
-            }
+        # --- Capture metadata comments: <!--Key="Value"--> ---
+        if ($line -match '<!--(\w+)="([^"]*)"-->') {
+            $key = $matches[1]
+            $value = $matches[2]
+            $metadata[$key] = $value
+            continue  # Don't add metadata comments to body
         }
-
-        # --- 2. Body & SideNav Parsing ---
-        if (-not $parsingMetadata) {
-            
-            # Toggle SideNav State
-            if ($line -match '') { $inSideNav = $true; continue }
-            if ($line -match '') { $inSideNav = $false; continue }
-
-            # Safety Catch: If EndSideNav was missing, force it off when we hit Content
-            if ($inSideNav -and $line -match '') {
-                $inSideNav = $false
-            }
-
-            # Process inside SideNav
-            if ($inSideNav) {
-                if ([string]::IsNullOrWhiteSpace($line) -or $line -match '') { continue }
-
-                if ($line -match '^#{1,6}\s*\*+([^*]+)\*+' -or $line -match '^#{1,6}\s*(.*)') {
-                    $potentialTitle = $matches[1].Trim()
-                    if ($potentialTitle -notmatch '(?i)On this page') {
-                        $sideNavTitle = $potentialTitle
-                    }
-                }
-                elseif ($line -match '^-\s*(?!\[)(.*)$') {
-                    $currentParent = @{ label = $matches[1].Trim(); url = ""; sublinks = @() }
-                    $sideNavItems += $currentParent
-                }
-                elseif ($line -match '^-\s*\[(.*?)\]\((.*?)\)$') {
-                    $currentParent = @{ label = $matches[1].Trim(); url = $matches[2].Trim(); sublinks = @() }
-                    $sideNavItems += $currentParent
-                }
-                elseif ($line -match '^[ \t]+-\s*\[(.*?)\]\((.*?)\)$') {
-                    if ($currentParent -ne $null) {
-                        $currentParent.sublinks += @{ label = $matches[1].Trim(); url = $matches[2].Trim() }
-                    }
-                }
-                continue # Don't add SideNav text to the final body
-            }
-
-            # Process Normal Body
-            
-            # 1. Skip structural tags entirely
-            if ($line -match '' -or 
-                $line -match '' -or 
-                $line -match '' -or 
-                $line -match '') {
+        
+        # --- Detect SideNav boundaries ---
+        if ($line -match '<!--SideNav-->') {
+            $inSideNav = $true
+            continue
+        }
+        
+        if ($line -match '<!--EndSideNav-->') {
+            $inSideNav = $false
+            continue
+        }
+        
+        # --- Detect Content boundaries ---
+        if ($line -match '<!--Content-->') {
+            $inContent = $true
+            $inSideNav = $false  # Ensure we exit SideNav mode
+            continue
+        }
+        
+        if ($line -match '<!--EndContent-->') {
+            $inContent = $false
+            continue
+        }
+        
+        # --- Process SideNav content ---
+        if ($inSideNav) {
+            # Skip comment lines inside SideNav
+            if ($line -match '<!--.*-->') {
                 continue
             }
-
-            # 2. Clean inline html comments safely (single line only)
-            $cleanedLine = $line -replace '', ''
             
-            # 3. If removing the comment made the line empty, skip it (but preserve normal markdown blank lines)
-            if ([string]::IsNullOrWhiteSpace($cleanedLine) -and -not [string]::IsNullOrWhiteSpace($line)) {
+            # Skip empty lines
+            if ([string]::IsNullOrWhiteSpace($line)) {
                 continue
             }
-
-            # Append to array exactly as is, preserving markdown indentation
+            
+            # Extract title: #### *related links* (or any header with asterisks)
+            if ($line -match '^#{1,6}\s*\*+([^*]+)\*+') {
+                $sideNavTitle = $matches[1].Trim()
+                continue
+            }
+            
+            # Top-level link: - Link 1 (no markdown link syntax)
+            if ($line -match '^-\s+(?!\[)(.+)$') {
+                $currentParent = @{ 
+                    label = $matches[1].Trim()
+                    url = $null
+                    sublinks = @()
+                }
+                $sideNavItems += $currentParent
+                continue
+            }
+            
+            # Sublink (indented):   - [Sublink 1](/)
+            if ($line -match '^\s+-\s*\[([^\]]+)\]\(([^)]+)\)$') {
+                if ($currentParent -ne $null) {
+                    $currentParent.sublinks += @{ 
+                        label = $matches[1].Trim()
+                        url = $matches[2].Trim()
+                    }
+                }
+                continue
+            }
+            
+            # Regular markdown link at top level (fallback): - [Link](url)
+            if ($line -match '^-\s*\[([^\]]+)\]\(([^)]+)\)$') {
+                $currentParent = @{ 
+                    label = $matches[1].Trim()
+                    url = $matches[2].Trim()
+                    sublinks = @()
+                }
+                $sideNavItems += $currentParent
+                continue
+            }
+            
+            # If we get here, treat as plain text line in SideNav (maybe description)
+            # Add as a special item or ignore - you decide
+            continue
+        }
+        
+        # --- Process normal body content ---
+        if ($inContent) {
+            # Remove any stray HTML comments from body
+            $cleanedLine = $line -replace '<!--.*?-->', ''
+            
+            # Keep the line even if empty (preserves markdown structure)
             $bodyLines += $cleanedLine
         }
     }
-
-    # --- 3. Append the SideNav YAML ---
+    
+    # --- Build YAML frontmatter from metadata and SideNav ---
+    $yamlLines = @()
+    $hasFrontmatter = $false
+    
+    # Add captured metadata comments as YAML
+    if ($metadata.Count -gt 0) {
+        $hasFrontmatter = $true
+        foreach ($key in $metadata.Keys) {
+            $value = $metadata[$key] -replace '"', '\"'  # Escape quotes
+            $yamlLines += "$key: `"$value`""
+        }
+    }
+    
+    # Add SideNav data as YAML
+    if ($sideNavTitle) {
+        $hasFrontmatter = $true
+        $yamlLines += "sidenav_title: `"$($sideNavTitle -replace '"', '\"')`""
+    }
+    
     if ($sideNavItems.Count -gt 0) {
-        $yamlBlock += "sidenav_title: `"$sideNavTitle`""
-        $yamlBlock += "sidenav_items:"
+        $hasFrontmatter = $true
+        $yamlLines += "sidenav_items:"
         foreach ($item in $sideNavItems) {
-            $yamlBlock += "  - label: `"$($item.label)`""
-            if ($item.url) { $yamlBlock += "    url: `"$($item.url)`"" }
+            $yamlLines += "  - label: `"$($item.label -replace '"', '\"')`""
+            if ($item.url) {
+                $yamlLines += "    url: `"$($item.url -replace '"', '\"')`""
+            }
             
             if ($item.sublinks.Count -gt 0) {
-                $yamlBlock += "    sublinks:"
+                $yamlLines += "    sublinks:"
                 foreach ($sub in $item.sublinks) {
-                    $yamlBlock += "      - label: `"$($sub.label)`""
-                    $yamlBlock += "        url: `"$($sub.url)`""
+                    $yamlLines += "      - label: `"$($sub.label -replace '"', '\"')`""
+                    $yamlLines += "        url: `"$($sub.url -replace '"', '\"')`""
                 }
             } else {
-                $yamlBlock += "    sublinks: []"
+                $yamlLines += "    sublinks: []"
             }
         }
-        $metadataFound = $true
     }
-
-    # --- 4. Write File ---
-    if ($metadataFound) {
-        # Keep everything as an array to safely write lines without manipulating string blocks
-        $newContent = @()
+    
+    # --- Write the file ---
+    $newContent = @()
+    
+    if ($hasFrontmatter) {
         $newContent += "---"
-        $newContent += $yamlBlock
+        $newContent += $yamlLines
         $newContent += "---"
-        $newContent += ""
-        $newContent += $bodyLines
-
-        [System.IO.File]::WriteAllLines($file.FullName, $newContent, $utf8NoBom)
-        Write-Host "updated $($file.FullName)" -ForegroundColor Green
+        $newContent += ""  # Blank line after frontmatter
+    }
+    
+    $newContent += $bodyLines
+    
+    # Write back only if content changed
+    $newContentRaw = $newContent -join "`r`n"
+    if ($newContentRaw -ne $originalContent) {
+        # Ensure trailing newline
+        if (-not $newContentRaw.EndsWith("`r`n")) {
+            $newContentRaw += "`r`n"
+        }
+        [System.IO.File]::WriteAllText($file.FullName, $newContentRaw, $utf8NoBom)
+        Write-Host "Updated: $($file.FullName)" -ForegroundColor Green
+        
+        # Debug output
+        Write-Host "  Found metadata: $($metadata.Keys -join ', ')" -ForegroundColor Gray
+        Write-Host "  SideNav items: $($sideNavItems.Count)" -ForegroundColor Gray
+    } else {
+        Write-Host "No changes: $($file.FullName)" -ForegroundColor Gray
     }
 }
 
