@@ -195,84 +195,175 @@ C#
 [GeneratedRegex(@"^:::rcl-([a-zA-Z0-9-]+)[ \t]*(.*?)\r?\n(.*?)\r?\n:::", RegexOptions.Multiline | RegexOptions.Singleline)]
 private static partial Regex RclComponentBlockRegex();
 
-2. The Refactored Dispatcher
 
-This new version uses a switch statement (or a Dictionary of functions) to decide which HTML builder to call based on the tag name found in the Markdown.
+
+
+older Structure Suggestion
+
+    /MarkdownEngine
+
+        MarkdownRclParser.cs (The Entry Point/Router)
+
+        RclAttributeParser.cs (Shared utility)
+
+        /Handlers
+
+            IRclComponentHandler.cs (The Interface)
+
+            CardHandler.cs
+
+            AlertHandler.cs
+
+1. The Interface (IRclComponentHandler.cs)
+
+This ensures every new component you add follows the same contract.
 C#
 
-public static class MarkdownRclParser
+using System.Collections.Generic;
+
+namespace YourProject.MarkdownEngine.Handlers;
+
+public interface IRclComponentHandler
 {
-    private static readonly MarkdownPipeline _innerPipeline = new MarkdownPipelineBuilder().UseAdvancedExtensions().Build();
+    // The 'content' passed here is already converted to HTML
+    string Render(Dictionary<string, string> attributes, string htmlContent);
+}
 
-    public static string ProcessRclComponents(string rawMarkdown)
-    {
-        return RclComponentBlockRegex().Replace(rawMarkdown, match =>
-        {
-            string componentType = match.Groups[1].Value.ToLower(); // e.g., "card"
-            string attributesString = match.Groups[2].Value;       // e.g., title="Hello"
-            string rawContent = match.Groups[3].Value;            // The inner markdown
+2. The Shared Attribute Parser (RclAttributeParser.cs)
 
-            // 1. Parse attributes into a dictionary
-            var attrs = ParseAttributes(attributesString);
+Since every component needs to parse key="value", let's centralize it.
+C#
 
-            // 2. Convert inner markdown to HTML (so it works inside the component)
-            string htmlContent = Markdown.ToHtml(rawContent, _innerPipeline).Trim();
+using System;
+using System.Collections.Generic;
+using System.Text.RegularExpressions;
 
-            // 3. Dispatch to the correct builder
-            return componentType switch
-            {
-                "card" => HandleCard(attrs, htmlContent),
-                "alert" => HandleAlert(attrs, htmlContent),
-                "accordion" => HandleAccordion(attrs, htmlContent),
-                _ => $"" 
-            };
-        });
-    }
+namespace YourProject.MarkdownEngine;
 
-    private static Dictionary<string, string> ParseAttributes(string attrString)
+public static partial class RclAttributeParser
+{
+    [GeneratedRegex(@"([a-zA-Z0-9_-]+)=""([^""]+)""")]
+    private static partial Regex AttributeRegex();
+
+    public static Dictionary<string, string> Parse(string attributeString)
     {
         var attributes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        foreach (Match attrMatch in AttributeRegex().Matches(attrString))
+        foreach (Match match in AttributeRegex().Matches(attributeString))
         {
-            attributes[attrMatch.Groups[1].Value] = attrMatch.Groups[2].Value;
+            attributes[match.Groups[1].Value] = match.Groups[2].Value;
         }
         return attributes;
     }
+}
 
-    // --- Specific Handlers ---
+3. The Entry Point Router (MarkdownRclParser.cs)
 
-    private static string HandleCard(Dictionary<string, string> attrs, string content)
+This is the "Brain." It finds the blocks, identifies the component type, and delegates the work.
+C#
+
+using System;
+using System.Collections.Generic;
+using System.Text.RegularExpressions;
+using Markdig;
+using YourProject.MarkdownEngine.Handlers;
+
+namespace YourProject.MarkdownEngine;
+
+public partial class MarkdownRclParser
+{
+    private readonly MarkdownPipeline _pipeline;
+    private readonly Dictionary<string, IRclComponentHandler> _handlers;
+
+    // The Regex looks for :::rcl-{name} {attributes} \n {content} \n :::
+    [GeneratedRegex(@"^:::rcl-([a-zA-Z0-9-]+)[ \t]*(.*?)\r?\n(.*?)\r?\n:::", RegexOptions.Multiline | RegexOptions.Singleline)]
+    private static partial Regex RclComponentRegex();
+
+    public MarkdownRclParser(MarkdownPipeline pipeline)
     {
-        Enum.TryParse(attrs.GetValueOrDefault("variant", "Default"), true, out CardVariant variant);
+        _pipeline = pipeline;
         
-        return CardHtmlBuilder.Build(
-            variant,
-            attrs.GetValueOrDefault("title", ""),
-            attrs.GetValueOrDefault("href", "#"),
-            attrs.GetValueOrDefault("icon", "ca-gov-icon-info"),
-            content
-        );
+        // Register your handlers here
+        _handlers = new Dictionary<string, IRclComponentHandler>(StringComparer.OrdinalIgnoreCase)
+        {
+            { "card", new CardHandler() },
+            // { "alert", new AlertHandler() } // Add more as you build them
+        };
     }
 
-    private static string HandleAlert(Dictionary<string, string> attrs, string content)
+    public string Process(string rawMarkdown)
     {
-        // Example: :::rcl-alert type="warning"
-        string type = attrs.GetValueOrDefault("type", "info");
-        return $@"<div class=""alert alert-{type}"" role=""alert"">{content}</div>";
+        return RclComponentRegex().Replace(rawMarkdown, match =>
+        {
+            string tagName = match.Groups[1].Value;
+            string attrString = match.Groups[2].Value;
+            string bodyMarkdown = match.Groups[3].Value;
+
+            if (_handlers.TryGetValue(tagName, out var handler))
+            {
+                var attrs = RclAttributeParser.Parse(attrString);
+                
+                // Convert the inner markdown to HTML before giving it to the handler
+                string bodyHtml = Markdown.ToHtml(bodyMarkdown, _pipeline).Trim();
+                
+                return handler.Render(attrs, bodyHtml);
+            }
+
+            // If no handler exists, return a comment so the dev knows it's missing
+            return $"";
+        });
     }
 }
 
-3. Usage in your Pipeline
+4. A Specific Component Handler (Handlers/CardHandler.cs)
 
-Now your implementation code becomes very clean. You simply call the general processor before the final Markdown conversion.
+This file now contains zero regex logic—it only cares about building HTML.
 C#
 
-// 1. Logic checks
-HelperClass.CheckHeadingNesting(this.MainContent, 1);
+using System;
+using System.Collections.Generic;
 
-// 2. Process ALL RCL components at once
-this.MainContent = MarkdownRclParser.ProcessRclComponents(this.MainContent);
+namespace YourProject.MarkdownEngine.Handlers;
 
-// 3. Final Markdown to HTML conversion
+public class CardHandler : IRclComponentHandler
+{
+    public string Render(Dictionary<string, string> attributes, string htmlContent)
+    {
+        string title = attributes.GetValueOrDefault("title", "");
+        string href = attributes.GetValueOrDefault("href", "#");
+        string icon = attributes.GetValueOrDefault("icon", "ca-gov-icon-info");
+        
+        // Parse Variant Enum (Assuming CardVariant is defined globally)
+        Enum.TryParse(attributes.GetValueOrDefault("variant", "Default"), true, out CardVariant variant);
+
+        if (variant == CardVariant.Icon)
+        {
+            return $@"
+                <article class=""no-underline d-block bg-gray-50 bg-gray-lightest-hover p-a-md pos-rel"">
+                    <div class=""text-center p-b"">
+                        <span class=""{icon} color-p2 color-p2-hover text-huge d-block"" aria-hidden=""true""></span>
+                        <a href=""{href}"" class=""h4 m-t-0 m-b color-gray-dark link-before text-left no-underline d-block"">{title}</a>
+                        <div class=""color-gray-dark text-left"">{htmlContent}</div>
+                    </div>
+                </article>";
+        }
+
+        return $"";
+    }
+}
+
+5. Implementation in your Pipeline
+
+Now, your main logic is extremely clean. You initialize the parser once and run it.
+C#
+
+// 1. Setup the standard pipeline
 var pipeline = new MarkdownPipelineBuilder().UseAdvancedExtensions().Build();
+
+// 2. Initialize our custom RCL Router
+var rclParser = new MarkdownRclParser(pipeline);
+
+// 3. Process components FIRST
+this.MainContent = rclParser.Process(this.MainContent);
+
+// 4. Then process the rest of the Markdown
 this.MainContent = Markdown.ToHtml(this.MainContent, pipeline);
