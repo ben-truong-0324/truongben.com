@@ -338,116 +338,199 @@ namespace MyComponentLibrary.Tests
 
 ###################
 
-Give them a syntax that uses the fenced block style (:::) with simple key="value" attributes on the opening line. It feels exactly like writing a standard Markdown code block, which most users are already comfortable with.
 
-What they will write:
-Markdown
 
-:::rcl-card variant="Icon" title="Online Services" icon="ca-gov-icon-computer" href="/services"
-Here is the description of the service they are looking for.
-:::
 
-2. The Architectural "Gotcha" (The TagHelper Trap)
 
-There is a massive trap here: TagHelpers only execute on physical .cshtml files during the Razor compile/render pipeline. If you convert a Markdown string to HTML at runtime and use @Html.Raw() to display it, Razor will completely ignore the <rcl-card> tags. The browser will receive <rcl-card>, not know what it is, and fail to render your state design system styles (like those ca-gov classes).
+The Shared Models: The Enums and a Data Class.
 
-The Solution: You need your Markdown pipeline to output the raw Bootstrap HTML directly, bypassing the TagHelper. To keep your code DRY, we will extract the HTML-generating logic out of your TagHelper and into a shared CardHtmlBuilder that both your TagHelper and your Markdown parser can use.
-3. The Implementation
-Step 1: Extract the HTML Logic
+    The Static Renderer: The pure logic that spits out HTML strings.
 
-Create a static builder so you aren't duplicating HTML strings.
+    The Consumers: Your TagHelper and your MarkdownRclParser will both call that renderer.
+
+1. The Shared Definitions (RclCardModels.cs)
+
+Move these out of the TagHelper file so they are accessible everywhere in your project.
 C#
 
-public static class CardHtmlBuilder
+namespace MyComponentLibrary.Models
 {
-    // Pass in a simple data object or dictionary of your properties
-    public static string Build(CardVariant variant, string title, string href, string iconClass, string content, bool isGridItem = false, string buttonText = "")
-    {
-        string h100 = isGridItem ? " h-100" : "";
-        string flexInner = isGridItem ? " h-100 d-flex flex-column" : "";
-        string mtAuto = isGridItem ? "mt-auto" : "m-t-md";
+    public enum CardVariant { Default, Icon, Image, Legacy }
 
-        if (variant == CardVariant.Icon)
-        {
-            return $@"
-                <article class=""no-underline d-block bg-gray-50 bg-gray-lightest-hover p-a-md pos-rel{h100}"">
-                    <div class=""text-center p-b"">
-                        <span class=""{iconClass} color-p2 color-p2-hover text-huge d-block"" aria-hidden=""true""></span>
-                        <a href=""{href}"" class=""h4 m-t-0 m-b color-gray-dark link-before text-left no-underline d-block"">{title}</a>
-                        <p class=""color-gray-dark text-left"">{content}</p>
-                    </div>
-                </article>";
-        }
-        
-        // ... (Add your other variant if-statements here exactly as they were) ...
-        
-        return ""; 
+    public enum LegacyCardType
+    {
+        Default, Understated, Standout, Overstated, 
+        Primary, Danger, Inverted, Info, Success, Warning
+    }
+
+    // A simple DTO to pass data between the parser/taghelper and the renderer
+    public class CardProperties
+    {
+        public CardVariant Variant { get; set; } = CardVariant.Default;
+        public string Title { get; set; } = string.Empty;
+        public string Href { get; set; } = "javascript:;";
+        public bool IsGridItem { get; set; }
+        public string ButtonText { get; set; } = string.Empty;
+        public string IconClass { get; set; } = "ca-gov-icon-info";
+        public string ImageSrc { get; set; } = string.Empty;
+        public string ImageAlt { get; set; } = string.Empty;
+        public LegacyCardType LegacyType { get; set; } = LegacyCardType.Default;
+        public string Content { get; set; } = string.Empty;
     }
 }
 
-(Now, update your CardTagHelper's ProcessAsync method to simply call this builder and set output.Content.SetHtmlContent(...)).
-Step 2: The Markdown Pre-Processor
+2. The Portable Renderer (RclCardRenderer.cs)
 
-Since we just got your [GeneratedRegex] working in the previous steps, we can use that exact same high-performance pattern to find and replace these blocks before you pass the string to your Markdown-to-HTML converter.
+This class has no dependencies on Razor or Regex. It just takes a CardProperties object and returns a string.
 C#
 
-using System.Text.RegularExpressions;
+using MyComponentLibrary.Models;
 
-public partial class MarkdownCardParser
+namespace MyComponentLibrary.Renderers;
+
+public static class RclCardRenderer
 {
-    // Matches the block: :::rcl-card [attributes] \n [content] \n :::
-    // Singleline makes '.' match newlines. Multiline makes '^' match line starts.
-    [GeneratedRegex(@"^:::rcl-card[ \t]*(.*?)\r?\n(.*?)\r?\n:::", RegexOptions.Multiline | RegexOptions.Singleline)]
-    private static partial Regex RclCardBlockRegex();
-
-    // Matches key="value" pairs
-    [GeneratedRegex(@"([a-zA-Z0-9_-]+)=""([^""]+)""")]
-    private static partial Regex AttributeRegex();
-
-    public static string ProcessCards(string rawMarkdown)
+    public static string Render(CardProperties p)
     {
-        return RclCardBlockRegex().Replace(rawMarkdown, match =>
+        string h100 = p.IsGridItem ? " h-100" : "";
+        string flexInner = p.IsGridItem ? " h-100 d-flex flex-column" : "";
+        string mtAuto = p.IsGridItem ? "mt-auto" : "m-t-md";
+
+        return p.Variant switch
         {
-            string attributesString = match.Groups[1].Value;
-            string content = match.Groups[2].Value; // The Markdown inside the card
+            CardVariant.Icon => RenderIconCard(p, h100),
+            CardVariant.Image => RenderImageCard(p, h100, flexInner),
+            CardVariant.Legacy => RenderLegacyCard(p, h100),
+            _ => RenderDefaultCard(p, h100, flexInner, mtAuto)
+        };
+    }
 
-            // 1. Parse the key="value" attributes into a dictionary
-            var attributes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            foreach (Match attrMatch in AttributeRegex().Matches(attributesString))
-            {
-                attributes[attrMatch.Groups[1].Value] = attrMatch.Groups[2].Value;
-            }
+    private static string RenderIconCard(CardProperties p, string h100) => $@"
+        <article class=""no-underline d-block bg-gray-50 bg-gray-lightest-hover p-a-md pos-rel{h100}"">
+            <div class=""text-center p-b"">
+                <span class=""{p.IconClass} color-p2 color-p2-hover text-huge d-block"" aria-hidden=""true""></span>
+                <a href=""{p.Href}"" class=""h4 m-t-0 m-b color-gray-dark link-before text-left no-underline d-block"">{p.Title}</a>
+                <div class=""color-gray-dark text-left"">{p.Content}</div>
+            </div>
+        </article>";
 
-            // 2. Safely extract values with defaults
-            string title = attributes.GetValueOrDefault("title", string.Empty);
-            string href = attributes.GetValueOrDefault("href", "javascript:;");
-            string iconClass = attributes.GetValueOrDefault("icon", "ca-gov-icon-info");
-            
-            // Parse the enum safely
-            CardVariant variant = CardVariant.Default;
-            if (attributes.TryGetValue("variant", out string? variantStr))
-            {
-                Enum.TryParse(variantStr, true, out variant);
-            }
+    private static string RenderImageCard(CardProperties p, string h100, string flexInner) => $@"
+        <div class=""card pos-rel{h100}"">
+            <img class=""card-img"" src=""{p.ImageSrc}"" alt=""{p.ImageAlt}"" />
+            <div class=""card-body bg-gray-50 bg-gray-100-hover{flexInner}"">
+                <h3 class=""card-title""><a href=""{p.Href}"" class=""link-before"">{p.Title}</a></h3>
+                <div>{p.Content}</div>
+            </div>
+        </div>";
 
-            // 3. (Optional) If you want the inner text to support bold/italics, 
-            // you might want to run your markdownToHtml Func on the 'content' string here!
+    private static string RenderLegacyCard(CardProperties p, string h100)
+    {
+        bool useHeading = p.LegacyType is LegacyCardType.Default or LegacyCardType.Understated or LegacyCardType.Standout or LegacyCardType.Overstated;
+        string headerClass = useHeading ? "card-heading" : "card-header";
+        string standoutHtml = p.LegacyType == LegacyCardType.Standout ? "<span class=\"triangle\"></span><span class=\"triangle\"></span>" : "";
+        string cardModifier = p.LegacyType == LegacyCardType.Standout ? "card-standout highlight" : $"card-{p.LegacyType.ToString().ToLower()}";
+        string optionsHtml = string.IsNullOrWhiteSpace(p.ButtonText) ? "" : $@"<div class=""options""><a href=""{p.Href}"" class=""btn btn-default"">{p.ButtonText}</a></div>";
 
-            // 4. Generate the raw HTML string
-            return CardHtmlBuilder.Build(variant, title, href, iconClass, content);
-        });
+        return $@"
+            <div class=""card {cardModifier}{h100}"">
+                <div class=""{headerClass}"">
+                    {standoutHtml}
+                    <h3><span class=""{p.IconClass}"" aria-hidden=""true""></span> {p.Title}</h3>
+                    {optionsHtml}
+                </div>
+                <div class=""card-body"">{p.Content}</div>
+            </div>";
+    }
+
+    private static string RenderDefaultCard(CardProperties p, string h100, string flexInner, string mtAuto)
+    {
+        string buttonHtml = string.IsNullOrWhiteSpace(p.ButtonText) ? "" : $@"<p class=""{mtAuto}""><a class=""btn btn-primary p-x-md"" href=""{p.Href}"">{p.ButtonText}</a></p>";
+        return $@"
+            <div class=""card{h100}"">
+                <div class=""card-body bg-gray-50{flexInner}"">
+                    <h3 class=""h4 m-y-sm"">{p.Title}</h3>
+                    <div class=""m-b"">{p.Content}</div>
+                    {buttonHtml}
+                </div>
+            </div>";
     }
 }
 
-Step 3: Wire it into your Pipeline
+3. The Lean TagHelper (CardTagHelper.cs)
 
-Wherever you are calling your Markdown converter, just run this pre-processor first.
+Now your TagHelper is just a wrapper that collects properties and passes them to the renderer.
 C#
 
-string markdownContent = File.ReadAllText(filePath);
+using Microsoft.AspNetCore.Razor.TagHelpers;
+using MyComponentLibrary.Models;
+using MyComponentLibrary.Renderers;
 
-// 1. Convert the custom ::: directives directly into Bootstrap HTML
-string processedMarkdown = MarkdownCardParser.ProcessCards(markdownContent);
+namespace MyComponentLibrary.TagHelpers;
 
-// 2. Pass the result to your standard Markdown pipeline (e.g., Markdig)
-string finalHtml = markdownToHtml(processedMarkdown);
+[HtmlTargetElement("rcl-card")]
+public class CardTagHelper : TagHelper
+{
+    public CardVariant Variant { get; set; } = CardVariant.Default;
+    public string Title { get; set; } = string.Empty;
+    public string Href { get; set; } = "javascript:;";
+    public bool IsGridItem { get; set; } 
+    public string ButtonText { get; set; } = string.Empty;
+    public string IconClass { get; set; } = "ca-gov-icon-info";
+    public string ImageSrc { get; set; } = string.Empty;
+    public string ImageAlt { get; set; } = string.Empty;
+    public LegacyCardType LegacyType { get; set; } = LegacyCardType.Default;
+
+    public override async Task ProcessAsync(TagHelperContext context, TagHelperOutput output)
+    {
+        var childContent = await output.GetChildContentAsync();
+        output.TagName = null; // Remove <rcl-card>
+
+        var props = new CardProperties {
+            Variant = this.Variant,
+            Title = this.Title,
+            Href = this.Href,
+            IsGridItem = this.IsGridItem,
+            ButtonText = this.ButtonText,
+            IconClass = this.IconClass,
+            ImageSrc = this.ImageSrc,
+            ImageAlt = this.ImageAlt,
+            LegacyType = this.LegacyType,
+            Content = childContent.GetContent()
+        };
+
+        output.Content.SetHtmlContent(RclCardRenderer.Render(props));
+    }
+}
+
+4. The Markdown Handler (CardHandler.cs)
+
+This lives in your Markdown folder and uses the exact same logic.
+C#
+
+using MyComponentLibrary.Models;
+using MyComponentLibrary.Renderers;
+
+public class CardHandler : IRclComponentHandler
+{
+    public string Render(Dictionary<string, string> attrs, string htmlContent)
+    {
+        Enum.TryParse(attrs.GetValueOrDefault("variant", "Default"), true, out CardVariant variant);
+        Enum.TryParse(attrs.GetValueOrDefault("legacytype", "Default"), true, out LegacyCardType legacy);
+
+        var props = new CardProperties
+        {
+            Variant = variant,
+            LegacyType = legacy,
+            Title = attrs.GetValueOrDefault("title", ""),
+            Href = attrs.GetValueOrDefault("href", "#"),
+            IconClass = attrs.GetValueOrDefault("icon", "ca-gov-icon-info"),
+            ButtonText = attrs.GetValueOrDefault("buttontext", ""),
+            ImageSrc = attrs.GetValueOrDefault("src", ""),
+            ImageAlt = attrs.GetValueOrDefault("alt", ""),
+            IsGridItem = attrs.ContainsKey("griditem"), // check if key exists for bools
+            Content = htmlContent
+        };
+
+        return RclCardRenderer.Render(props);
+    }
+}
