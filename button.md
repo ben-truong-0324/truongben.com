@@ -286,128 +286,308 @@ namespace MyComponentLibrary.Tests
 ########################
 
 
+
+
+
+The Shared Models (MyProject.Rcl.Core)
+
+Move the enums and create a property DTO here so both the Markdown library and the TagHelper can see them.
+C#
+
+namespace MyComponentLibrary.Models
+{
+    public enum ButtonColor { Primary, Highlight, Standout, Default }
+    public enum ButtonSize { Default, Lg, Sm, Xs }
+
+    public class ButtonProperties
+    {
+        public ButtonColor Color { get; set; } = ButtonColor.Primary;
+        public ButtonSize Size { get; set; } = ButtonSize.Default;
+        public bool IsOutline { get; set; }
+        public bool IsDisabled { get; set; }
+        public bool IsHover { get; set; }
+        public string Href { get; set; } = string.Empty;
+        public string Content { get; set; } = string.Empty;
+    }
+}
+
+2. The Portable Renderer (MyProject.Rcl.Core)
+
+This contains the logic you previously had in the Process method, but returns a raw HTML string.
+C#
+
+using MyComponentLibrary.Models;
+using System.Collections.Generic;
+
+namespace MyComponentLibrary.Renderers
+{
+    public static class RclButtonRenderer
+    {
+        public static string Render(ButtonProperties p)
+        {
+            var classes = new List<string> { "btn" };
+
+            // 1. Resolve Color and Outline
+            string outlineModifier = p.IsOutline ? "-outline" : "";
+            string colorString = p.Color.ToString().ToLower();
+            classes.Add($"btn{outlineModifier}-{colorString}");
+
+            // 2. Resolve Size
+            if (p.Size == ButtonSize.Lg) classes.Add("btn-lg");
+            else if (p.Size == ButtonSize.Sm) classes.Add("btn-sm");
+            else if (p.Size == ButtonSize.Xs) classes.Add("btn-xs");
+
+            // 3. Resolve States
+            if (p.IsDisabled) classes.Add("disabled");
+            if (p.IsHover) classes.Add("btn-hover");
+
+            string classAttr = string.Join(" ", classes);
+
+            // 4. Render as Link or Button
+            if (!string.IsNullOrWhiteSpace(p.Href))
+            {
+                return $@"<a href=""{p.Href}"" class=""{classAttr}"" role=""button"">{p.Content}</a>";
+            }
+            else
+            {
+                string disabledAttr = p.IsDisabled ? " disabled=\"disabled\"" : "";
+                return $@"<button type=""button"" class=""{classAttr}""{disabledAttr}>{p.Content}</button>";
+            }
+        }
+    }
+}
+
+3. Update the TagHelper (MyComponentLibrary)
+
+The TagHelper now becomes a very thin "shell" that just passes data to the renderer.
+C#
+
+using Microsoft.AspNetCore.Razor.TagHelpers;
+using MyComponentLibrary.Models;
+using MyComponentLibrary.Renderers;
+
+namespace MyComponentLibrary.TagHelpers
+{
+    [HtmlTargetElement("rcl-button")]
+    public class ButtonTagHelper : TagHelper
+    {
+        public ButtonColor Color { get; set; } = ButtonColor.Primary;
+        public ButtonSize Size { get; set; } = ButtonSize.Default;
+        public bool IsOutline { get; set; }
+        public bool IsDisabled { get; set; }
+        public bool IsHover { get; set; }
+        public string Href { get; set; }
+
+        public override async Task ProcessAsync(TagHelperContext context, TagHelperOutput output)
+        {
+            var childContent = await output.GetChildContentAsync();
+            output.TagName = null; // Let the renderer handle the tag type
+
+            var props = new ButtonProperties
+            {
+                Color = this.Color,
+                Size = this.Size,
+                IsOutline = this.IsOutline,
+                IsDisabled = this.IsDisabled,
+                IsHover = this.IsHover,
+                Href = this.Href,
+                Content = childContent.GetContent()
+            };
+
+            output.Content.SetHtmlContent(RclButtonRenderer.Render(props));
+        }
+    }
+}
+
+4. Create the Markdown Handler (MyProject.Markdown)
+
+This handler lives in your Markdown library and wires the :::rcl-button syntax to the renderer.
+C#
+
+using MyComponentLibrary.Models;
+using MyComponentLibrary.Renderers;
+using System;
+using System.Collections.Generic;
+
+namespace MyProject.Markdown.Handlers
+{
+    public class ButtonHandler : IRclComponentHandler
+    {
+        public string Render(Dictionary<string, string> attrs, string htmlContent)
+        {
+            Enum.TryParse(attrs.GetValueOrDefault("color", "Primary"), true, out ButtonColor color);
+            Enum.TryParse(attrs.GetValueOrDefault("size", "Default"), true, out ButtonSize size);
+
+            var props = new ButtonProperties
+            {
+                Color = color,
+                Size = size,
+                IsOutline = attrs.ContainsKey("outline"), // Supports :::rcl-button outline="true" OR just outline
+                IsDisabled = attrs.ContainsKey("disabled"),
+                IsHover = attrs.ContainsKey("hover"),
+                Href = attrs.GetValueOrDefault("href", string.Empty),
+                Content = htmlContent // This is the text between the ::: lines
+            };
+
+            return RclButtonRenderer.Render(props);
+        }
+    }
+}
+
+5. Register in the Parser
+
+Finally, go into your MarkdownRclParser.cs and add the button to your _handlers dictionary.
+C#
+
+_handlers = new Dictionary<string, IRclComponentHandler>(StringComparer.OrdinalIgnoreCase)
+{
+    { "card", new CardHandler() },
+    { "row", new RowHandler(this.Process) },
+    { "button", new ButtonHandler() } // Add this line
+};
+
+How the User Uses It:
+
+Your non-technical users can now drop buttons inside rows or cards:
 Markdown
 
-Check out our new portal here:
-:::rcl-button text="Log In to Portal" color="Highlight" href="/login" isOutline="true" :::
+:::rcl-row
+:::rcl-card title="Need Help?" column="col-md-6"
+If you have questions, click the button below.
 
-Here is how to extract the HTML logic and wire it into the exact same Markdown processing pipeline you built for the cards.
-Step 1: Extract the Button HTML Logic
+:::rcl-button color="Highlight" href="/contact" size="Lg"
+Contact Support
+:::
+:::
+:::
 
-Just like the card, we need a static builder that generates the raw Bootstrap HTML so both your TagHelper and your Markdown parser can use the exact same rendering engine.
-C#
 
-public static class ButtonHtmlBuilder
-{
-    public static string Build(string text, ButtonColor color, ButtonSize size, bool isOutline, bool isDisabled, bool isHover, string href)
-    {
-        var classes = new List<string> { "btn" };
 
-        // 1. Resolve Color and Outline
-        string outlineModifier = isOutline ? "-outline" : "";
-        string colorString = color.ToString().ToLower();
-        classes.Add($"btn{outlineModifier}-{colorString}");
 
-        // 2. Resolve Size
-        if (size == ButtonSize.Lg) classes.Add("btn-lg");
-        else if (size == ButtonSize.Sm) classes.Add("btn-sm");
-        else if (size == ButtonSize.Xs) classes.Add("btn-xs");
+#######################
 
-        // 3. Resolve States
-        if (isDisabled) classes.Add("disabled");
-        if (isHover) classes.Add("btn-hover");
 
-        string classString = string.Join(" ", classes);
+This documentation covers both the User Guide (how non-technical staff should write the Markdown) and the Technical Architecture (how the code is structured to avoid circular dependencies and ensure performance).
+Part 1: User Documentation (Markdown Guide)
 
-        // 4. Resolve Tag Type
-        if (!string.IsNullOrWhiteSpace(href))
-        {
-            return $"<a href=\"{href}\" role=\"button\" class=\"{classString}\">{text}</a>";
-        }
-        else
-        {
-            string disabledAttr = isDisabled ? " disabled=\"disabled\"" : "";
-            return $"<button{disabledAttr} class=\"{classString}\">{text}</button>";
-        }
-    }
-}
+Our system uses a "Block" syntax (:::) to insert complex design system components into standard Markdown pages.
+1. General Rules
 
-(You can now replace the logic inside your ButtonTagHelper.Process method to simply call this Build method and output the result using output.Content.SetHtmlContent() and setting output.TagName = null;).
-Step 2: Add the Button Parser to your Markdown Pipeline
+    Every component starts with :::rcl-[name] and ends with :::.
 
-We will add a new [GeneratedRegex] to your existing parser class that looks for the single-line button syntax.
-C#
+    Attributes (like title or href) must be on the same line as the opening tag.
 
-using System.Text.RegularExpressions;
+    The content inside the block can use standard Markdown (bold, links, etc.).
 
-public partial class MarkdownComponentParser // Renamed from MarkdownCardParser since it handles both now!
-{
-    // Match the single-line block: :::rcl-button [attributes] :::
-    [GeneratedRegex(@":::rcl-button[ \t]+(.*?):::", RegexOptions.IgnoreCase)]
-    private static partial Regex RclButtonRegex();
+    Important: Do not indent the tags or the content. Keep everything flushed to the left margin.
 
-    // Your existing Attribute regex
-    [GeneratedRegex(@"([a-zA-Z0-9_-]+)=""([^""]+)""")]
-    private static partial Regex AttributeRegex();
+2. The Card Component (:::rcl-card)
 
-    // Your existing ProcessCards method goes here...
-    // public static string ProcessCards(string rawMarkdown) { ... }
+Used for service links, info boxes, or image-based navigation.
 
-    public static string ProcessButtons(string rawMarkdown)
-    {
-        return RclButtonRegex().Replace(rawMarkdown, match =>
-        {
-            string attributesString = match.Groups[1].Value;
+Attributes:
 
-            // 1. Parse the key="value" attributes
-            var attributes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            foreach (Match attrMatch in AttributeRegex().Matches(attributesString))
-            {
-                attributes[attrMatch.Groups[1].Value] = attrMatch.Groups[2].Value;
-            }
+    variant: Default, Icon, Image, or Legacy.
 
-            // 2. Safely extract standard values
-            string text = attributes.GetValueOrDefault("text", "Click Here");
-            string href = attributes.GetValueOrDefault("href", string.Empty);
+    title: The main heading of the card.
 
-            // 3. Parse Enums safely
-            ButtonColor color = ButtonColor.Primary;
-            if (attributes.TryGetValue("color", out string? colorStr))
-            {
-                Enum.TryParse(colorStr, true, out color);
-            }
+    href: Where the card links to.
 
-            ButtonSize size = ButtonSize.Default;
-            if (attributes.TryGetValue("size", out string? sizeStr))
-            {
-                Enum.TryParse(sizeStr, true, out size);
-            }
+    icon: The CSS class for the icon (e.g., ca-gov-icon-computer).
 
-            // 4. Parse Booleans safely
-            bool.TryParse(attributes.GetValueOrDefault("isoutline", "false"), out bool isOutline);
-            bool.TryParse(attributes.GetValueOrDefault("isdisabled", "false"), out bool isDisabled);
-            bool.TryParse(attributes.GetValueOrDefault("ishover", "false"), out bool isHover);
+    column: (Optional) Use when inside a row (e.g., col-md-4).
 
-            // 5. Generate the raw HTML string
-            return ButtonHtmlBuilder.Build(text, color, size, isOutline, isDisabled, isHover, href);
-        });
-    }
-}
+    griditem: Set to "true" to ensure all cards in a row have equal height.
 
-Step 3: Run the full pipeline
+Example:
+Markdown
 
-Now, right before you pass the markdown to your final HTML converter, you just chain your component processors together.
-C#
+:::rcl-card variant="Icon" title="Online Services" icon="ca-gov-icon-computer" href="/services"
+Access your **account** 24/7 through our secure portal.
+:::
 
-string markdownContent = File.ReadAllText(filePath);
+3. The Button Component (:::rcl-button)
 
-// 1. Process custom extensions
-string processedContent = MarkdownComponentParser.ProcessCards(markdownContent);
-processedContent = MarkdownComponentParser.ProcessButtons(processedContent);
+Used for Call-to-Actions.
 
-// 2. Convert to final HTML (using Markdig or whatever library you have)
-string finalHtml = markdownToHtml(processedContent); 
+Attributes:
 
-A Quick Note on the text attribute
+    color: Primary, Highlight, Standout, or Default.
 
-Because buttons are small, extracting the text from an attribute (text="Click Here") is much easier for your non-technical users than putting the text on a new line and closing it with a second ::: block. It prevents them from accidentally injecting markdown paragraphs inside a standard HTML button!
+    size: Default, Lg, Sm, or Xs.
+
+    href: If provided, the button acts as a link. If omitted, it acts as a standard button.
+
+    outline: (Optional) Add this to make it an outline-style button.
+
+Example:
+Markdown
+
+:::rcl-button color="Highlight" size="Lg" href="/apply"
+Apply Now
+:::
+
+4. Layouts (:::rcl-row)
+
+Use this to place multiple cards side-by-side.
+
+Example:
+Markdown
+
+:::rcl-row
+:::rcl-card title="Card A" column="col-md-6" griditem="true"
+Content for left side.
+:::
+
+:::rcl-card title="Card B" column="col-md-6" griditem="true"
+Content for right side.
+:::
+:::
+
+Part 2: Technical Architecture Recap
+
+To support these components across both Razor (.cshtml) and Markdown (.md), we implemented a Decoupled 3-Tier Architecture. This prevents circular dependencies between your UI library and your Markdown engine.
+1. The Project Structure
+
+    MyProject.Rcl.Core (The Brain)
+
+        No dependencies.
+
+        Contains CardProperties, ButtonProperties, and Enums.
+
+        Contains RclCardRenderer and RclButtonRenderer (Static classes returning pure HTML strings).
+
+        Why: Both the Markdown engine and the Razor library need to "know" what a card looks like.
+
+    MyProject.MarkdownEngine (The Parser)
+
+        Depends on: Rcl.Core and Markdig.
+
+        Contains MarkdownRclParser (The Router).
+
+        Contains Handlers (e.g., CardHandler) that map Markdown attributes to Core renderers.
+
+    MyProject.Rcl (The UI Library)
+
+        Depends on: Rcl.Core and MarkdownEngine.
+
+        Contains TagHelpers (e.g., CardTagHelper) that map Razor attributes to Core renderers.
+
+        Why: This library handles the final display in the web app.
+
+2. The Component Lifecycle (Markdown Flow)
+
+    Regex Discovery: The MarkdownRclParser uses a "Nuclear Regex" to find :::rcl- blocks in the raw Markdown string.
+
+    Dispatching: The parser identifies the tag name (e.g., card) and sends the attributes/body to the specific Handler.
+
+    Recursive Processing: If the component is a row, it calls the parser again on its inner content to find nested cards/buttons.
+
+    Rendering: The Handler calls the static Renderer in the Core library.
+
+    HTML Injection: The parser replaces the :::...::: block with the resulting raw HTML, surrounded by newlines (\n\n) to ensure the Markdown engine treats it as a protected HTML block.
+
+    Final Conversion: The modified string is passed to Markdig for final conversion to a full HTML page.
+
+
+
