@@ -275,6 +275,7 @@ public partial class MarkdownRclParser
     private readonly Dictionary<string, IRclComponentHandler> _handlers;
 
     // The Regex looks for :::rcl-{name} {attributes} \n {content} \n :::
+    :::(rcl-)?(?<component>\w+)(?:\s+(?<attributes>[^\n:]+?))?\s*\n(?<content>.*?)\n:::
     [GeneratedRegex(@"^:::rcl-([a-zA-Z0-9-]+)[ \t]*(.*?)\r?\n(.*?)\r?\n:::", RegexOptions.Multiline | RegexOptions.Singleline)]
     private static partial Regex RclComponentRegex();
 
