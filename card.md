@@ -341,196 +341,129 @@ namespace MyComponentLibrary.Tests
 
 
 
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using MyProject.Rcl.Core.Models;
+using MyProject.Rcl.Core.Renderers;
 
-The Shared Models: The Enums and a Data Class.
-
-    The Static Renderer: The pure logic that spits out HTML strings.
-
-    The Consumers: Your TagHelper and your MarkdownRclParser will both call that renderer.
-
-1. The Shared Definitions (RclCardModels.cs)
-
-Move these out of the TagHelper file so they are accessible everywhere in your project.
-C#
-
-namespace MyComponentLibrary.Models
+namespace MyComponentLibrary.Tests
 {
-    public enum CardVariant { Default, Icon, Image, Legacy }
-
-    public enum LegacyCardType
+    [TestClass]
+    public class RclCardRendererTests
     {
-        Default, Understated, Standout, Overstated, 
-        Primary, Danger, Inverted, Info, Success, Warning
-    }
-
-    // A simple DTO to pass data between the parser/taghelper and the renderer
-    public class CardProperties
-    {
-        public CardVariant Variant { get; set; } = CardVariant.Default;
-        public string Title { get; set; } = string.Empty;
-        public string Href { get; set; } = "javascript:;";
-        public bool IsGridItem { get; set; }
-        public string ButtonText { get; set; } = string.Empty;
-        public string IconClass { get; set; } = "ca-gov-icon-info";
-        public string ImageSrc { get; set; } = string.Empty;
-        public string ImageAlt { get; set; } = string.Empty;
-        public LegacyCardType LegacyType { get; set; } = LegacyCardType.Default;
-        public string Content { get; set; } = string.Empty;
-    }
-}
-
-2. The Portable Renderer (RclCardRenderer.cs)
-
-This class has no dependencies on Razor or Regex. It just takes a CardProperties object and returns a string.
-C#
-
-using MyComponentLibrary.Models;
-
-namespace MyComponentLibrary.Renderers;
-
-public static class RclCardRenderer
-{
-    public static string Render(CardProperties p)
-    {
-        string h100 = p.IsGridItem ? " h-100" : "";
-        string flexInner = p.IsGridItem ? " h-100 d-flex flex-column" : "";
-        string mtAuto = p.IsGridItem ? "mt-auto" : "m-t-md";
-
-        return p.Variant switch
+        [TestMethod]
+        public void Render_DefaultVariant_ProducesValidBootstrapHtml()
         {
-            CardVariant.Icon => RenderIconCard(p, h100),
-            CardVariant.Image => RenderImageCard(p, h100, flexInner),
-            CardVariant.Legacy => RenderLegacyCard(p, h100),
-            _ => RenderDefaultCard(p, h100, flexInner, mtAuto)
-        };
-    }
+            // Arrange
+            var props = new CardProperties {
+                Variant = CardVariant.Default,
+                Title = "Test Title",
+                Content = "Card Body Content",
+                ButtonText = "Click Me"
+            };
 
-    private static string RenderIconCard(CardProperties p, string h100) => $@"
-        <article class=""no-underline d-block bg-gray-50 bg-gray-lightest-hover p-a-md pos-rel{h100}"">
-            <div class=""text-center p-b"">
-                <span class=""{p.IconClass} color-p2 color-p2-hover text-huge d-block"" aria-hidden=""true""></span>
-                <a href=""{p.Href}"" class=""h4 m-t-0 m-b color-gray-dark link-before text-left no-underline d-block"">{p.Title}</a>
-                <div class=""color-gray-dark text-left"">{p.Content}</div>
-            </div>
-        </article>";
+            // Act
+            var html = RclCardRenderer.Render(props);
 
-    private static string RenderImageCard(CardProperties p, string h100, string flexInner) => $@"
-        <div class=""card pos-rel{h100}"">
-            <img class=""card-img"" src=""{p.ImageSrc}"" alt=""{p.ImageAlt}"" />
-            <div class=""card-body bg-gray-50 bg-gray-100-hover{flexInner}"">
-                <h3 class=""card-title""><a href=""{p.Href}"" class=""link-before"">{p.Title}</a></h3>
-                <div>{p.Content}</div>
-            </div>
-        </div>";
+            // Assert
+            StringAssert.Contains(html, "<div class=\"card\">");
+            StringAssert.Contains(html, "Test Title");
+            StringAssert.Contains(html, "Card Body Content");
+            StringAssert.Contains(html, "Click Me");
+        }
 
-    private static string RenderLegacyCard(CardProperties p, string h100)
-    {
-        bool useHeading = p.LegacyType is LegacyCardType.Default or LegacyCardType.Understated or LegacyCardType.Standout or LegacyCardType.Overstated;
-        string headerClass = useHeading ? "card-heading" : "card-header";
-        string standoutHtml = p.LegacyType == LegacyCardType.Standout ? "<span class=\"triangle\"></span><span class=\"triangle\"></span>" : "";
-        string cardModifier = p.LegacyType == LegacyCardType.Standout ? "card-standout highlight" : $"card-{p.LegacyType.ToString().ToLower()}";
-        string optionsHtml = string.IsNullOrWhiteSpace(p.ButtonText) ? "" : $@"<div class=""options""><a href=""{p.Href}"" class=""btn btn-default"">{p.ButtonText}</a></div>";
-
-        return $@"
-            <div class=""card {cardModifier}{h100}"">
-                <div class=""{headerClass}"">
-                    {standoutHtml}
-                    <h3><span class=""{p.IconClass}"" aria-hidden=""true""></span> {p.Title}</h3>
-                    {optionsHtml}
-                </div>
-                <div class=""card-body"">{p.Content}</div>
-            </div>";
-    }
-
-    private static string RenderDefaultCard(CardProperties p, string h100, string flexInner, string mtAuto)
-    {
-        string buttonHtml = string.IsNullOrWhiteSpace(p.ButtonText) ? "" : $@"<p class=""{mtAuto}""><a class=""btn btn-primary p-x-md"" href=""{p.Href}"">{p.ButtonText}</a></p>";
-        return $@"
-            <div class=""card{h100}"">
-                <div class=""card-body bg-gray-50{flexInner}"">
-                    <h3 class=""h4 m-y-sm"">{p.Title}</h3>
-                    <div class=""m-b"">{p.Content}</div>
-                    {buttonHtml}
-                </div>
-            </div>";
-    }
-}
-
-3. The Lean TagHelper (CardTagHelper.cs)
-
-Now your TagHelper is just a wrapper that collects properties and passes them to the renderer.
-C#
-
-using Microsoft.AspNetCore.Razor.TagHelpers;
-using MyComponentLibrary.Models;
-using MyComponentLibrary.Renderers;
-
-namespace MyComponentLibrary.TagHelpers;
-
-[HtmlTargetElement("rcl-card")]
-public class CardTagHelper : TagHelper
-{
-    public CardVariant Variant { get; set; } = CardVariant.Default;
-    public string Title { get; set; } = string.Empty;
-    public string Href { get; set; } = "javascript:;";
-    public bool IsGridItem { get; set; } 
-    public string ButtonText { get; set; } = string.Empty;
-    public string IconClass { get; set; } = "ca-gov-icon-info";
-    public string ImageSrc { get; set; } = string.Empty;
-    public string ImageAlt { get; set; } = string.Empty;
-    public LegacyCardType LegacyType { get; set; } = LegacyCardType.Default;
-
-    public override async Task ProcessAsync(TagHelperContext context, TagHelperOutput output)
-    {
-        var childContent = await output.GetChildContentAsync();
-        output.TagName = null; // Remove <rcl-card>
-
-        var props = new CardProperties {
-            Variant = this.Variant,
-            Title = this.Title,
-            Href = this.Href,
-            IsGridItem = this.IsGridItem,
-            ButtonText = this.ButtonText,
-            IconClass = this.IconClass,
-            ImageSrc = this.ImageSrc,
-            ImageAlt = this.ImageAlt,
-            LegacyType = this.LegacyType,
-            Content = childContent.GetContent()
-        };
-
-        output.Content.SetHtmlContent(RclCardRenderer.Render(props));
-    }
-}
-
-4. The Markdown Handler (CardHandler.cs)
-
-This lives in your Markdown folder and uses the exact same logic.
-C#
-
-using MyComponentLibrary.Models;
-using MyComponentLibrary.Renderers;
-
-public class CardHandler : IRclComponentHandler
-{
-    public string Render(Dictionary<string, string> attrs, string htmlContent)
-    {
-        Enum.TryParse(attrs.GetValueOrDefault("variant", "Default"), true, out CardVariant variant);
-        Enum.TryParse(attrs.GetValueOrDefault("legacytype", "Default"), true, out LegacyCardType legacy);
-
-        var props = new CardProperties
+        [TestMethod]
+        public void Render_GridItem_AppendsH100Classes()
         {
-            Variant = variant,
-            LegacyType = legacy,
-            Title = attrs.GetValueOrDefault("title", ""),
-            Href = attrs.GetValueOrDefault("href", "#"),
-            IconClass = attrs.GetValueOrDefault("icon", "ca-gov-icon-info"),
-            ButtonText = attrs.GetValueOrDefault("buttontext", ""),
-            ImageSrc = attrs.GetValueOrDefault("src", ""),
-            ImageAlt = attrs.GetValueOrDefault("alt", ""),
-            IsGridItem = attrs.ContainsKey("griditem"), // check if key exists for bools
-            Content = htmlContent
-        };
+            var props = new CardProperties { IsGridItem = true };
+            var html = RclCardRenderer.Render(props);
 
-        return RclCardRenderer.Render(props);
+            StringAssert.Contains(html, "class=\"card h-100\"");
+            StringAssert.Contains(html, "d-flex flex-column");
+        }
+
+        [TestMethod]
+        public void Render_LegacyStandout_IncludesTriangles()
+        {
+            var props = new CardProperties { 
+                Variant = CardVariant.Legacy, 
+                LegacyType = LegacyCardType.Standout 
+            };
+            
+            var html = RclCardRenderer.Render(props);
+
+            StringAssert.Contains(html, "card-standout highlight");
+            StringAssert.Contains(html, "<span class=\"triangle\"></span>");
+        }
     }
 }
+
+2. The Slimmed TagHelper Tests (CardTagHelperTests.cs)
+
+These ensure that your CardTagHelper properties correctly map to the output. We keep one or two here just to ensure the "glue" is working.
+C#
+
+[TestClass]
+public class CardTagHelperTests
+{
+    private (TagHelperContext, TagHelperOutput) CreateTagHelperData()
+    {
+        var context = new TagHelperContext(new TagHelperAttributeList(), new Dictionary<object, object>(), "test");
+        var output = new TagHelperOutput("rcl-card", new TagHelperAttributeList(), (useCachedResult, encoder) => {
+            var content = new DefaultTagHelperContent();
+            content.SetContent("Inner Content");
+            return Task.FromResult<TagHelperContent>(content);
+        });
+        return (context, output);
+    }
+
+    [TestMethod]
+    public async Task ProcessAsync_PassesPropertiesToRenderer()
+    {
+        // Arrange
+        var helper = new CardTagHelper { 
+            Title = "TagHelper Title", 
+            Variant = CardVariant.Icon,
+            IconClass = "custom-icon"
+        };
+        var (context, output) = CreateTagHelperData();
+
+        // Act
+        await helper.ProcessAsync(context, output);
+        var result = output.Content.GetContent();
+
+        // Assert
+        Assert.IsNull(output.TagName); // Wrapper stripped
+        StringAssert.Contains(result, "custom-icon");
+        StringAssert.Contains(result, "TagHelper Title");
+    }
+}
+
+3. The New Markdown Tests (MarkdownRclTests.cs)
+
+Since you wanted your non-technical users to use this, we need to test the Markdown Parser → Handler → Renderer flow.
+C#
+
+[TestClass]
+public class MarkdownRclTests
+{
+    [TestMethod]
+    public void Process_CardComponent_RendersHtmlSuccessfully()
+    {
+        // Arrange
+        var pipeline = new Markdig.MarkdownPipelineBuilder().Build();
+        var parser = new MyProject.Markdown.MarkdownRclParser(pipeline);
+        
+        string markdown = @":::rcl-card title=""MD Card"" variant=""Icon""
+This is **bold** content.
+:::";
+
+        // Act
+        var result = parser.Process(markdown);
+
+        // Assert
+        StringAssert.Contains(result, "<article class=\"no-underline"); // Check it chose the Icon variant
+        StringAssert.Contains(result, "MD Card");
+        StringAssert.Contains(result, "<strong>bold</strong>"); // Check that inner markdown worked!
+    }
+}
+
