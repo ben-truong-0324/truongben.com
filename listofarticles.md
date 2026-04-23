@@ -114,3 +114,111 @@ JSON
     "Category": "Press release"
   }
 ]
+
+
+
+###################
+
+The C# Model and Parsing Logic
+C#
+
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text.Json;
+
+namespace YourApp.Models
+{
+    // The model representing a single item in the JSON array
+    public class ArticleItem
+    {
+        public string Title { get; set; }
+        public DateTime Date { get; set; }
+        public string Href { get; set; }
+        public string Category { get; set; }
+    }
+
+    public class ArticleArchiveModel
+    {
+        /// <summary>
+        /// Reads the JSON array, orders the articles by date (newest first), 
+        /// and groups them by Year.
+        /// </summary>
+        public static Dictionary<int, List<ArticleItem>> GetGroupedListOfArticles(string filePath)
+        {
+            if (!File.Exists(filePath))
+            {
+                return new Dictionary<int, List<ArticleItem>>();
+            }
+
+            try
+            {
+                string jsonContent = File.ReadAllText(filePath);
+                
+                var options = new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                };
+
+                var articles = JsonSerializer.Deserialize<List<ArticleItem>>(jsonContent, options) 
+                               ?? new List<ArticleItem>();
+
+                // Group by Year, ensuring the newest articles and newest years are first
+                var groupedArticles = articles
+                    .OrderByDescending(a => a.Date)
+                    .GroupBy(a => a.Date.Year)
+                    .ToDictionary(
+                        group => group.Key, 
+                        group => group.ToList()
+                    );
+
+                return groupedArticles;
+            }
+            catch (JsonException ex)
+            {
+                // Handle or log parsing errors
+                return new Dictionary<int, List<ArticleItem>>();
+            }
+        }
+    }
+}
+
+How to consume it in your Razor View
+
+Because the return type is a Dictionary<int, List<ArticleItem>>, iterating over it in your .cshtml file is very straightforward. The dictionary Key will be the Year, and the Value will be the list of articles for that year.
+HTML
+
+@model ArticleArchivePageModel
+
+<div class="col-lg-8 col-xl-9">
+    <h1 class="m-t-0">Press Releases Archive</h1>
+
+    @if (Model.GroupedArticles != null && Model.GroupedArticles.Any())
+    {
+        @foreach (var yearGroup in Model.GroupedArticles)
+        {
+            <div class="m-t-lg">
+                <h2 class="h3 brd-bottom-1 brd-gray-300 p-b-sm">@yearGroup.Key</h2>
+                
+                <ul class="list-unstyled m-t-md">
+                    @foreach (var article in yearGroup.Value)
+                    {
+                        <li class="m-b-md">
+                            <h3 class="h5 m-b-0">
+                                <a href="@article.Href">@article.Title</a>
+                            </h3>
+                            <p class="text-muted small m-t-xs">
+                                @article.Date.ToString("MMMM dd, yyyy") | @article.Category
+                            </p>
+                        </li>
+                    }
+                </ul>
+            </div>
+        }
+    }
+    else
+    {
+        <p>No articles found.</p>
+    }
+</div>

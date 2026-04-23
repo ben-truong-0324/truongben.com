@@ -1,370 +1,173 @@
----
-title: "Newsroom"
-sidenav_title: "Newsroom"
-sidenav_items:
-  - label: "Newsroom"
-    url: "/patterns/newsroom.html"
-  - label: "News articles"
-    url: "javascript:;"
-  - label: "Press releases"
-    url: "/patterns/list-of-articles-or-content-sample.html"
-  - label: "Blog"
-    url: "javascript:;"
-  - label: "Disaster information"
-    url: "javascript:;"
-  - label: "Subscription services"
-    url: "javascript:;"
-  - label: "Public records requests"
-    url: "javascript:;"
-  - label: "Press information"
-    url: "javascript:;"
----
+To implement this "Until filled" behavior for job postings, we need to intercept the dates at three points in AddUpdPostedJob.aspx.cs:
 
-# Newsroom
+    When loading the form for a new job (setting the default).
 
-## Featured
+    When parsing the database value to display on the UI.
 
-<featured-article 
-    image="/images/sample/images/news-img1.png"
-    title="California state department announces plans for upcoming important initiative"
-    url="javascript:;"
-    date="Month 00, 0000"
-    type="Press release">
-</featured-article>
+    When saving the UI value back to the database.
 
-<featured-article 
-    image="/images/sample/images/news-img2.png"
-    title="Experts Provide Insights on Climate Remediation"
-    url="javascript:;"
-    date="Month 00, 0000"
-    type="Press release">
-</featured-article>
+Since ASP.NET Web Forms code-behind files can be tricky to unit test directly due to Page lifecycle dependencies, the cleanest approach is to extract the date translation logic into a separate static helper class. This keeps your code-behind clean and makes your test suite fast and isolated.
 
-<featured-article 
-    image="/images/sample/images/news-img3.png"
-    title="Individuals Reflect on CalFresh Awareness Month"
-    url="javascript:;"
-    date="Month 00, 0000"
-    type="Press release">
-</featured-article>
+Here is the implementation breakdown.
+1. Create a Helper Class
 
-
-<news-card-grid>
-    <news-card 
-        title="Subscribe for updates" 
-        url="javascript:;">
-        Keep up-to-date on our latest updates. Sign up for email notifications.
-    </news-card>
-
-    <news-card 
-        title="Blog post title" 
-        url="javascript:;"
-        date="Month 00, 0000">
-        Short 1 - 2 sentence description promoting this blog post.
-    </news-card>
-</news-card-grid>
-
-
-## Latest news
-
-<latest-news 
-    title="Local Entity Implements Changes to Operations"
-    url="javascript:;"
-    date="Month 00, 0000"
-    type="News">
-</latest-news>
-
-<latest-news 
-    title="Discussion Continues Regarding California’s Project Funding"
-    url="javascript:;"
-    date="Month 00, 0000"
-    type="News">
-</latest-news>
-
-<latest-news 
-    title="Significant Agreement Reached in San Francisco"
-    url="javascript:;"
-    date="Month 00, 0000"
-    type="News">
-</latest-news>
-
-
-
-
-
-;#############################################
-
-
-
----
-title: "Page heading"
-sidenav_title: "Newsroom"
-sidenav_items:
-  - label: "Newsroom"
-    url: "/patterns/newsroom-sample.html"
-  - label: "News articles"
-    url: "javascript:;"
-  - label: "Press releases"
-    url: "javascript:;"
-  - label: "Blog"
-    url: "javascript:;"
-  - label: "Disaster information"
-    url: "javascript:;"
-  - label: "Subscription services"
-    url: "javascript:;"
-  - label: "Public records requests"
-    url: "javascript:;"
-  - label: "Press information"
-    url: "javascript:;"
----
-
-# Page heading
-
-## Month 0000
-
-<news-item 
-    title="California state department announces plans for upcoming important initiative"
-    url="javascript:;"
-    date="Month 00, 0000"
-    type="Press release">
-</news-item>
-
-<news-item 
-    title="Experts Provide Insights on Climate Remediation"
-    url="javascript:;"
-    date="Month 00, 0000"
-    type="Press release">
-</news-item>
-
-## Month 0000
-
-<news-item 
-    title="Individuals Reflect on CalFresh Awareness Month"
-    url="javascript:;"
-    date="Month 00, 0000"
-    type="Press release">
-</news-item>
-
-<news-item 
-    title="Local Entity Implements Changes to Operations"
-    url="javascript:;"
-    date="Month 00, 0000"
-    type="Press release">
-</news-item>
-
-<news-item 
-    title="Discussion Continues Regarding California’s Project Funding"
-    url="javascript:;"
-    date="Month 00, 0000"
-    type="Press release">
-</news-item>
-
-<news-item 
-    title="Significant Agreement Reached in San Francisco"
-    url="javascript:;"
-    date="Month 00, 0000"
-    type="Press release">
-</news-item>
-
-<news-item 
-    title="Official Report Sheds Light on the last Flu Season"
-    url="javascript:;"
-    date="Month 00, 0000"
-    type="Press release">
-</news-item>
-
----
-
-<cagov-pagination 
-    data-current-page="5" 
-    data-total-pages="99">
-</cagov-pagination>
-
-
-check also for console in browser in local
-
-
-
-
-
-
-We need to update the regex to capture the component name (e.g., card, alert, accordion) right after the :::rcl- prefix.
-C#
-
-// Updated to capture the component type: :::rcl-{componentName}
-[GeneratedRegex(@"^:::rcl-([a-zA-Z0-9-]+)[ \t]*(.*?)\r?\n(.*?)\r?\n:::", RegexOptions.Multiline | RegexOptions.Singleline)]
-private static partial Regex RclComponentBlockRegex();
-
-
-
-
-older Structure Suggestion
-
-    /MarkdownEngine
-
-        MarkdownRclParser.cs (The Entry Point/Router)
-
-        RclAttributeParser.cs (Shared utility)
-
-        /Handlers
-
-            IRclComponentHandler.cs (The Interface)
-
-            CardHandler.cs
-
-            AlertHandler.cs
-
-1. The Interface (IRclComponentHandler.cs)
-
-This ensures every new component you add follows the same contract.
-C#
-
-using System.Collections.Generic;
-
-namespace YourProject.MarkdownEngine.Handlers;
-
-public interface IRclComponentHandler
-{
-    // The 'content' passed here is already converted to HTML
-    string Render(Dictionary<string, string> attributes, string htmlContent);
-}
-
-2. The Shared Attribute Parser (RclAttributeParser.cs)
-
-Since every component needs to parse key="value", let's centralize it.
+Add this utility class anywhere in your BARJobMain namespace (e.g., in the App_Code folder or directly above the AddPostedJob class) to handle the conversions.
 C#
 
 using System;
-using System.Collections.Generic;
-using System.Text.RegularExpressions;
 
-namespace YourProject.MarkdownEngine;
-
-public static partial class RclAttributeParser
+namespace BARJobMain
 {
-    [GeneratedRegex(@"([a-zA-Z0-9_-]+)=""([^""]+)""")]
-    private static partial Regex AttributeRegex();
-
-    public static Dictionary<string, string> Parse(string attributeString)
+    public static class JobDateHelper
     {
-        var attributes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        foreach (Match match in AttributeRegex().Matches(attributeString))
+        // Translates DB format (YYYY-MM-DD) to UI display
+        public static string FormatDateForDisplay(string dbDate)
         {
-            attributes[match.Groups[1].Value] = match.Groups[2].Value;
-        }
-        return attributes;
-    }
-}
+            if (string.IsNullOrWhiteSpace(dbDate) || dbDate.Length < 10) 
+                return dbDate;
 
-3. The Entry Point Router (MarkdownRclParser.cs)
-
-This is the "Brain." It finds the blocks, identifies the component type, and delegates the work.
-C#
-
-using System;
-using System.Collections.Generic;
-using System.Text.RegularExpressions;
-using Markdig;
-using YourProject.MarkdownEngine.Handlers;
-
-namespace YourProject.MarkdownEngine;
-
-public partial class MarkdownRclParser
-{
-    private readonly MarkdownPipeline _pipeline;
-    private readonly Dictionary<string, IRclComponentHandler> _handlers;
-
-    // The Regex looks for :::rcl-{name} {attributes} \n {content} \n :::
-    :::(rcl-)?(?<component>\w+)(?:\s+(?<attributes>[^\n:]+?))?\s*\n(?<content>.*?)\n:::
-    [GeneratedRegex(@"^:::rcl-([a-zA-Z0-9-]+)[ \t]*(.*?)\r?\n(.*?)\r?\n:::", RegexOptions.Multiline | RegexOptions.Singleline)]
-    private static partial Regex RclComponentRegex();
-
-    public MarkdownRclParser(MarkdownPipeline pipeline)
-    {
-        _pipeline = pipeline;
-        
-        // Register your handlers here
-        _handlers = new Dictionary<string, IRclComponentHandler>(StringComparer.OrdinalIgnoreCase)
-        {
-            { "card", new CardHandler() },
-            // { "alert", new AlertHandler() } // Add more as you build them
-        };
-    }
-
-    public string Process(string rawMarkdown)
-    {
-        return RclComponentRegex().Replace(rawMarkdown, match =>
-        {
-            string tagName = match.Groups[1].Value;
-            string attrString = match.Groups[2].Value;
-            string bodyMarkdown = match.Groups[3].Value;
-
-            if (_handlers.TryGetValue(tagName, out var handler))
+            if (int.TryParse(dbDate.Substring(0, 4), out int yyyy) && yyyy >= 2040)
             {
-                var attrs = RclAttributeParser.Parse(attrString);
-                
-                // Convert the inner markdown to HTML before giving it to the handler
-                string bodyHtml = Markdown.ToHtml(bodyMarkdown, _pipeline).Trim();
-                
-                return handler.Render(attrs, bodyHtml);
+                return "Until filled";
             }
-
-            // If no handler exists, return a comment so the dev knows it's missing
-            return $"";
-        });
-    }
-}
-
-4. A Specific Component Handler (Handlers/CardHandler.cs)
-
-This file now contains zero regex logic—it only cares about building HTML.
-C#
-
-using System;
-using System.Collections.Generic;
-
-namespace YourProject.MarkdownEngine.Handlers;
-
-public class CardHandler : IRclComponentHandler
-{
-    public string Render(Dictionary<string, string> attributes, string htmlContent)
-    {
-        string title = attributes.GetValueOrDefault("title", "");
-        string href = attributes.GetValueOrDefault("href", "#");
-        string icon = attributes.GetValueOrDefault("icon", "ca-gov-icon-info");
-        
-        // Parse Variant Enum (Assuming CardVariant is defined globally)
-        Enum.TryParse(attributes.GetValueOrDefault("variant", "Default"), true, out CardVariant variant);
-
-        if (variant == CardVariant.Icon)
-        {
-            return $@"
-                <article class=""no-underline d-block bg-gray-50 bg-gray-lightest-hover p-a-md pos-rel"">
-                    <div class=""text-center p-b"">
-                        <span class=""{icon} color-p2 color-p2-hover text-huge d-block"" aria-hidden=""true""></span>
-                        <a href=""{href}"" class=""h4 m-t-0 m-b color-gray-dark link-before text-left no-underline d-block"">{title}</a>
-                        <div class=""color-gray-dark text-left"">{htmlContent}</div>
-                    </div>
-                </article>";
+            
+            int mm = Convert.ToInt32(dbDate.Substring(5, 2));
+            int dd = Convert.ToInt32(dbDate.Substring(6, 2));
+            return $"{mm:D2}/{dd:D2}/{yyyy}";
         }
 
-        return $"";
+        // Translates UI display back to DB format
+        public static string FormatDateForDatabase(string uiDate)
+        {
+            if (uiDate.Trim().Equals("Until filled", StringComparison.OrdinalIgnoreCase))
+            {
+                return "01/01/2099";
+            }
+            return uiDate; // Assumes it's already a valid date string if not "Until filled"
+        }
     }
 }
 
-5. Implementation in your Pipeline
+2. Update AddUpdPostedJob.aspx.cs
 
-Now, your main logic is extremely clean. You initialize the parser once and run it.
+Now, plug the helper into the three critical lifecycle steps in your code-behind.
+
+Step A: Set the Default in Page_Load
+Find the !IsPostBack block in Page_Load and update the datepicker0.Text initialization.
 C#
 
-// 1. Setup the standard pipeline
-var pipeline = new MarkdownPipelineBuilder().UseAdvancedExtensions().Build();
+// OLD:
+// datepicker0.Text = DateTime.Now.ToString("MM/dd/yyyy");
 
-// 2. Initialize our custom RCL Router
-var rclParser = new MarkdownRclParser(pipeline);
+// NEW:
+datepicker0.Text = "Until filled"; 
 
-// 3. Process components FIRST
-this.MainContent = rclParser.Process(this.MainContent);
+Step B: Handle the Display in getPostedJob4Update
+Replace the manual substring date parsing with the new helper.
+C#
 
-// 4. Then process the rest of the Markdown
-this.MainContent = Markdown.ToHtml(this.MainContent, pipeline);
+// OLD:
+// int yyyy = Convert.ToInt32(ds.Tables[0].Rows[0]["finalfiledt"].ToString().Substring(0, 4));
+// int mm = Convert.ToInt32(ds.Tables[0].Rows[0]["finalfiledt"].ToString().Substring(5, 2));
+// int dd = Convert.ToInt32(ds.Tables[0].Rows[0]["finalfiledt"].ToString().Substring(6, 2));
+// datepicker0.Text = mm + "/" + dd + "/" + yyyy;
+// hdnFdate.Value = datepicker0.Text;
+
+// NEW:
+string rawDbDate = ds.Tables[0].Rows[0]["finalfiledt"].ToString();
+datepicker0.Text = JobDateHelper.FormatDateForDisplay(rawDbDate);
+hdnFdate.Value = datepicker0.Text;
+
+Step C: Handle the Save in updateJobTable
+Intercept the UI value and convert it before passing it into AddPostedJobs and UpdPostedJobs.
+C#
+
+protected void updateJobTable()
+{
+    // Convert the value just before saving
+    string dbFilingDate = JobDateHelper.FormatDateForDatabase(datepicker0.Text);
+
+    if (Session["PorcessAction"].ToString() == "AJ")
+    {
+        result = barjobs.AddPostedJobs(txtJobCntList.Text, ddlJobClass.Text, txtJobLink.Text,
+            ddlCitynm.Text, ddlCountynm.Text,
+            dbFilingDate, appName, dbName); // Use dbFilingDate here
+    }
+    else if (Session["PorcessAction"].ToString() == "UJ")
+    {
+        result = barjobs.UpdPostedJobs(hdnJobId.Value, hdnJobCnx.Value, txtJobCnt1.Text, ddlJobClass.Text,
+            txtJobLink.Text, ddlCitynm.Text, ddlCountynm.Text,
+            dbFilingDate, appName, dbName); // Use dbFilingDate here
+    }
+    // ... rest of method remains the same
+}
+
+3. MSTest Suite
+
+By pulling the logic into a static helper, testing becomes straightforward. Here is an MSTest class you can drop into your testing project to guarantee the boundary logic holds up.
+C#
+
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using BARJobMain;
+
+namespace BARJobMain.Tests
+{
+    [TestClass]
+    public class JobDateHelperTests
+    {
+        [TestMethod]
+        public void FormatDateForDisplay_Year2040_ReturnsUntilFilled()
+        {
+            string dbDate = "2040-06-15 00:00:00";
+            string result = JobDateHelper.FormatDateForDisplay(dbDate);
+            Assert.AreEqual("Until filled", result);
+        }
+
+        [TestMethod]
+        public void FormatDateForDisplay_Year2099_ReturnsUntilFilled()
+        {
+            string dbDate = "2099-01-01 00:00:00";
+            string result = JobDateHelper.FormatDateForDisplay(dbDate);
+            Assert.AreEqual("Until filled", result);
+        }
+
+        [TestMethod]
+        public void FormatDateForDisplay_Year2039_ReturnsFormattedDate()
+        {
+            string dbDate = "2039-12-31 00:00:00";
+            string result = JobDateHelper.FormatDateForDisplay(dbDate);
+            Assert.AreEqual("12/31/2039", result);
+        }
+
+        [TestMethod]
+        public void FormatDateForDatabase_UntilFilled_Returns2099()
+        {
+            string uiDate = "Until filled";
+            string result = JobDateHelper.FormatDateForDatabase(uiDate);
+            Assert.AreEqual("01/01/2099", result);
+        }
+
+        [TestMethod]
+        public void FormatDateForDatabase_StandardDate_ReturnsUnchanged()
+        {
+            string uiDate = "05/10/2026";
+            string result = JobDateHelper.FormatDateForDatabase(uiDate);
+            Assert.AreEqual("05/10/2026", result);
+        }
+    }
+}
+
+4. Documentation & Version Control
+
+Wiki / Project Documentation Update:
+
+    Feature: Indefinite Job Postings ("Until filled")
+
+    Overview: The system supports open-ended job postings without a hard final filing date.
+    Behavior: > * UI Default: When adding a new job, the date field defaults to "Until filled".
+
+        Database Storage: The system strictly requires a valid DATETIME. Indefinite postings are stored in the database as "01/01/2099".
+
+        Data Retrieval: Any job with a finalfiledt year of 2040 or greater will automatically mask the explicit date and render as "Until filled" to the end user.
+
+    Technical Implementation: Handled via the JobDateHelper class. Ensure any new bulk-imports or DB scripts adhere to the 2040+ rule for open-ended positions.
