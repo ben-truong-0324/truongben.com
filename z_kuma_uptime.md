@@ -1,52 +1,59 @@
-# Standard Work: File-Share NuGet Publishing & Consumption
+# NuGet with File-Share and TeamCity 
 
 ## 1. Development & Versioning Strategy
 
-All library work is driven by tickets. To maintain traceable artifacts, the versioning scheme combines Semantic Versioning (SemVer) controlled by the developer, and a 4th-quartile revision number controlled by TeamCity.
+Nupkg's versioning scheme will use Semantic Versioning controlled by the dev, and a 4th-quartile SVN revision number provided by TeamCity.
 
-**Format:** `Major.Minor.Patch.Revision` (e.g., `1.2.0.455`)
+**Format:** `Major.Minor.Patch.Revision` (e.g., `1.0.0.200`)
 
-- **Ticket Creation:** A ticket is created for the library feature/fix.
+Old workflow: webapp ticket, webapp branch and CI/CD
 
-- **Branching:** The developer creates a branch for the ticket (e.g., `feature/TICKET-123`).
+New workflow if using nupkg: nupkg ticket, nupkg branch and CI/CD, webapp ticket, webapp branch and CI/CD
 
-- **Updating the Version Prefix:** In the library's `.csproj`, the developer manually bumps the SemVer using the `<VersionPrefix>` tag. Do not use `<Version>`.
+- **Ticket Creation:** A ticket is created for the library feature/patch.
+
+- **Branching:** The developer creates a branch for the ticket (e.g., `branches/TICKET-BAR_000`).
+
+- **Updating the Version Prefix:** In the library's `.csproj`, the developer manually bumps the SemVer using the `<VersionPrefix>` tag. Do not use `<Version>` (see below)
 
 ```xml
 <PropertyGroup>
-  <VersionPrefix>1.2.0</VersionPrefix> 
+  <VersionPrefix>1.0.0</VersionPrefix> 
 </PropertyGroup>
 ```
 
+
 ## 2. TeamCity Build & Pack (Staging to temp/)
 
-When the library code is pushed, TeamCity intercepts the build, applies the 4th quartile, and pushes the artifact to a temporary staging drive.
+When the library code is pushed, TeamCity intercepts the merge and starts the build. TC applies the 4th quartile, build with debug config, test, and pack with output dir to be shared drive at temp \\barsvn.dca.cagov\temp\
 
-TeamCity Build Step Configuration (.NET CLI):
+TeamCity Build Step Configuration:
 
     Command: pack
 
-    Projects: path/to/Library.csproj
+    Projects: LibraryProj/LibraryProj.csproj
 
-    Output directory: \\your-server\shared-drive\temp
+    Output directory: \\barsvn.dca.cagov\temp\
 
     Command line parameters: ```text
     /p:Version=$(VersionPrefix).%build.counter%
 
-    *(This forces MSBuild to combine the `1.2.0` from the `.csproj` with the TeamCity build counter, resulting in `1.2.0.455`)*.
+    *(This forces MSBuild to combine the `1.2.0` from `.csproj` with the TeamCity SVN revision number resulting in `1.2.0.455`)*.
 
-## 3. Automated Validation & Promotion (to teamnuget/)
+=> We use \\barsvn.dca.cagov\temp\ as Staging for nupkg
 
-Packages must not be consumed directly from temp/. A downstream script or secondary TeamCity step is responsible for validating the package and moving it to the permanent directory.
+## 3. Automated Validation & Promotion (to BARNuget/)
 
-Standard Promotion Script (PowerShell):
-This script runs as the final step of the pipeline. It checks if the package exists, verifies it isn't corrupted, moves it to the permanent store, and wipes the temp/ directory.
+Prod projects must not consume nupkg from temp/. We first validate Staging nupkg with a secondary TeamCity step or in our own local dev. We validate the package can be consumed without errors or warnings. 
+This can be done by having webapp projects and test projects consume the ST nupkg, then check for 200 status or smoketest.
+
+Only then we run the next step to robocopy to BARNuget and wipe the nupkg in temp/
 PowerShell
 
 ```xml
 
-$TempPath = "\\your-server\shared-drive\temp"
-$PermPath = "\\your-server\shared-drive\teamnuget"
+$TempPath = "\\barsvn.dca.cagov\temp\"
+$PermPath = "\\barsvn.dca.cagov\barnuget\"
 $Packages = Get-ChildItem -Path $TempPath -Filter *.nupkg
 
 foreach ($Pkg in $Packages) {
@@ -70,10 +77,10 @@ Remove-Item -Path "$TempPath\*" -Include *.nupkg -Force
 
 ## 4. Consuming the Package
 
-Once the package is in teamnuget/, the library ticket is closed. A new ticket is generated for the consuming application(s) to implement the update.
+Once the package is in BARNuget/, the library ticket is closed. A new ticket is created for the consuming application(s) to implement the update.
 
-1. Configure the Consuming App's nuget.config
-To ensure the consumer apps can find the file share, configure the local nuget.config to point to the UNC path:
+1. Configure the consuming app's nuget.config
+To ensure the consumer apps can find the file share, configure the local nuget.config (at root, same level as Source and Documentation) to point to the UNC path:
 XML
 
 ```xml
@@ -85,11 +92,11 @@ XML
 ```
 
 2. Developer Updates the Application
-The developer checks out the consuming app, runs dotnet add package MyLibrary -v 1.2.0.455, integrates the new library code, and pushes the app to its own CI pipeline.
+The developer checks out the consuming app, runs dotnet add package MyLibrary -v 1.2.0.455 or update PackageReference in csproj, integrates the new library code, and pushes the app to its own CI pipeline. Now we utilize the same workflow for webapp CI/CD with CR then ST, UAT, RC/Prod.
 
 ## 5. Verification Testing
 
-To enforce compliance and ensure the build server actually pulls the correct 4th-quartile version (and doesn't accidentally load a cached, older DLL), the consuming application must contain a unit test verifying the referenced assembly.
+To ensure the build server actually pulls the correct version (and doesn't accidentally resolve to a cached different version in global .nuget cache in TeamCity server), the consuming application must contain a unit test verifying the referenced assembly.
 
 MSTest Verification Example:
 In the consuming application's MSTest project, use reflection to verify the exact version loaded into the app domain.
@@ -98,7 +105,7 @@ C#
 ```xml
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Reflection;
-using MySharedLibrary; // The NuGet package being consumed
+using MySNugetPkgLibrary; // The NuGet package being consumed
 
 namespace ConsumingApp.Tests
 {
@@ -108,15 +115,12 @@ namespace ConsumingApp.Tests
         [TestMethod]
         public void Verify_CorrectLibraryVersion_IsReferenced()
         {
-            // Arrange
+            // MANUALLY SET THIS
             string expectedVersion = "1.2.0.455";
             
-            // Act
-            // Grab any known type from your NuGet package to inspect its assembly
             Assembly libraryAssembly = typeof(SomeClassInYourLibrary).Assembly;
             string actualVersion = libraryAssembly.GetName().Version.ToString();
 
-            // Assert
             Assert.AreEqual(expectedVersion, actualVersion, 
                 $"The application is referencing version {actualVersion} of the library, but {expectedVersion} is required by this ticket.");
         }
@@ -126,12 +130,14 @@ namespace ConsumingApp.Tests
 
 Workflow Summary Checklist
 
-    [ ] Library Ticket: Developer updates code and bumps <VersionPrefix>.
+    [ ] 1. Library Ticket: Developer updates library code and test, bump <VersionPrefix>, update readme, changelog, release...
 
-    [ ] Library Pipeline: TeamCity packs the .nupkg with %build.counter% to temp/.
+    [ ] 2. Library Pipeline: TeamCity packs the .nupkg with %build.counter% to temp/.
 
-    [ ] Promotion: CI script validates the package, moves it to teamnuget/, and empties temp/.
+    [ ] 3. Promotion: CI script or manually validate the package, moves it to barnuget/, and empty out temp/.
 
-    [ ] App Ticket: Developer updates the consuming app to reference the new version.
+    [ ] 4. App Ticket: Developer updates the consuming app to reference the new version with applicable changes in code and test; update readme, changelog, release
 
-    [ ] MSTest Validation: Test suite verifies the exact 4-part assembly version is compiled into the consuming application.
+    [ ] 4.5. MSTest Validation: Test suite verifies the exact 4-part assembly version is compiled into the consuming application.
+
+    [ ] 5. Regular CI/CD: app ticket branch then goes through  code review, ST, UAT, RC/Prod.
