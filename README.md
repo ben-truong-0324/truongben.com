@@ -38,3 +38,7 @@ chmod +x gitpush.sh
 
 docker compose up --build #build hugo for local dev with docker
 localhost:1313
+
+git add .
+git commit -m "updated"
+git push
