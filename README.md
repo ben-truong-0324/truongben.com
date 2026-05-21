@@ -42,3 +42,73 @@ localhost:1313
 git add .
 git commit -m "updated"
 git push
+
+
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.ComponentModel.DataAnnotations;
+// using YourApp.Validation; 
+namespace YourApp.Tests.Validation
+{
+    [TestClass]
+    public class foosAttributeTests
+    {
+        private foosAttribute _attribute;
+        private ValidationContext _validationContext;
+
+        [TestInitialize]
+        public void Setup()
+        {
+            _attribute = new foosAttribute();
+            // ValidationContext requires a target object, a dummy object works perfectly
+            _validationContext = new ValidationContext(new object());
+        }
+
+        [DataTestMethod]
+        [DataRow(null)]
+        [DataRow("")]
+        [DataRow("   ")]
+        [DataRow("This is a completely normal sentence without any links.")]
+        [DataRow("I am learning about http requests.")] // Should pass (no ://)
+        [DataRow("My domain does not start with www today.")] // Should pass (no .)
+        public void IsValid_WhenInputIsValid_ReturnsSuccess(string input)
+        {
+            // Act
+            var result = _attribute.GetValidationResult(input, _validationContext);
+
+            // Assert
+            Assert.AreEqual(ValidationResult.Success, result);
+        }
+
+        [DataTestMethod]
+        [DataRow("Check out my site at http://example.com")]
+        [DataRow("Secure link: https://google.com")]
+        [DataRow("Just type www.bing.com in the browser")]
+        [DataRow("It is HTTP://UPPERCASE.COM")] // Case-insensitivity check
+        [DataRow("Look at HTTPS://TEST.ORG")] // Case-insensitivity check
+        [DataRow("WWW.WEBSITE.COM")] // Case-insensitivity check
+        public void IsValid_WhenInputContainsForbiddenStrings_ReturnsValidationError(string input)
+        {
+            // Act
+            var result = _attribute.GetValidationResult(input, _validationContext);
+
+            // Assert
+            Assert.IsNotNull(result, "Expected a validation error, but got success.");
+            Assert.AreEqual("Links and URLs are not allowed in this field.", result.ErrorMessage);
+        }
+
+        [TestMethod]
+        public void IsValid_WithCustomErrorMessage_ReturnsCustomMessage()
+        {
+            // Arrange
+            var customAttribute = new foosAttribute { ErrorMessage = "Custom error message." };
+            var input = "Here is a link: https://test.com";
+
+            // Act
+            var result = customAttribute.GetValidationResult(input, _validationContext);
+
+            // Assert
+            Assert.IsNotNull(result);
+            Assert.AreEqual("Custom error message.", result.ErrorMessage);
+        }
+    }
+}
