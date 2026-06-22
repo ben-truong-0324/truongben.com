@@ -1,0 +1,151 @@
+1. Update the .NET Application Code
+First, you need to configure your middleware to process the Windows Identity tokens passed down from IIS.
+Install the NuGet package: Microsoft.AspNetCore.Authentication.Negotiate
+Update your Program.cs (or Startup.cs) to require authentication:
+C#
+using Microsoft.AspNetCore.Authentication.Negotiate;
+
+var builder = WebApplication.CreateBuilder(args);
+
+// 1. Add the authentication services
+builder.Services.AddAuthentication(NegotiateDefaults.AuthenticationScheme)
+    .AddNegotiate();
+
+builder.Services.AddAuthorization(options =>
+{
+    // 2. Optional: Force all requests to be authenticated globally
+    options.FallbackPolicy = options.DefaultPolicy;
+});
+
+builder.Services.AddControllersWithViews(); // Or AddRazorPages()
+
+var app = builder.Build();
+
+// ... existing middleware ...
+
+app.UseRouting();
+
+// 3. MUST be exactly in this order
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.MapControllers(); 
+
+app.Run();
+2. Configure Local Development
+To test this locally in Visual Studio or Rider, you need to update your launchSettings.json (located in the Properties folder) so IIS Express requests Windows credentials instead of letting you in anonymously.
+JSON
+"iisSettings": {
+  "windowsAuthentication": true,
+  "anonymousAuthentication": false,
+  "iisExpress": {
+    "applicationUrl": "http://localhost:12345",
+    "sslPort": 44300
+  }
+}
+3. Configure the IIS Server
+When deploying to the actual server, IIS must be told to reject anonymous traffic and enforce Windows Authentication.
+Install the Server Role: Open Server Manager > Add Roles and Features. Expand Web Server (IIS) > Web Server > Security. Ensure the Windows Authentication feature is installed.
+Open IIS Manager: Select your specific Web Application.
+Open Authentication: Double-click the Authentication icon in the IIS section.
+Disable Anonymous: Right-click Anonymous Authentication and select Disable.
+Enable Windows: Right-click Windows Authentication and select Enable.
+4. Update IIS Logging for Usernames
+The good news is that standard IIS W3C logging natively supports capturing the username. The reason it currently shows up blank (usually as a - in the log files) is because Anonymous Authentication was handling the requests.
+Once Windows Authentication is enabled via the steps above, IIS will automatically start populating the username field with the DOMAIN\username format.
+To verify the field is actively being tracked:
+Open IIS Manager and select your server node or the specific site.
+Double-click Logging.
+Under the Log File section, ensure the format is set to W3C.
+Click Select Fields... next to the format dropdown.
+Check the box for User Name (cs-username).
+Click OK, and then click Apply in the right-hand Actions pane.
+Note: Depending on how aggressively your server caches configuration, you may need to run iisreset in an elevated command prompt to see the log files immediately start generating with the new identity data.
+
+
+
+
+
+
+############
+
+
+
+. The Architectural Fix: C# Razor Extensions (Recommended)
+The cleanest, most performant way to handle this is on the server before the HTML is ever rendered. This guarantees zero UI flickering and protects your nested HTML elements.
+Create a global string extension method in your .NET project:
+C#
+namespace YourApp.Extensions
+{
+    public static class StringExtensions
+    {
+        public static string ToSentenceCase(this string input)
+        {
+            if (string.IsNullOrWhiteSpace(input)) return input;
+
+            // Lowercase the whole string, then capitalize the first letter
+            var lowerCase = input.ToLower();
+            return char.ToUpper(lowerCase[0]) + lowerCase.Substring(1);
+        }
+    }
+}
+Then, import this namespace in your _ViewImports.cshtml so it is available globally, and apply it directly to your data bindings:
+HTML
+@* In your Razor View *@
+<a href="@link.Url" class="first-level-link">
+    @link.DisplayText.ToSentenceCase()
+</a>
+
+<h2>@Model.PageTitle.ToSentenceCase()</h2>
+Note: The only downside to mathematical sentence casing is that it destroys acronyms (e.g., "Contact IT support" becomes "Contact it support"). If your data has a lot of acronyms, you may need to expand the C# method to accept an array of preserved words.
+2. The Sweeping Fix: Safe Vanilla JavaScript
+If your text is entirely hardcoded in hundreds of Razor views and you don't have the time to wrap every single string in a C# method, you can use a JavaScript sweeper.
+To avoid destroying the State Template's injected <span class="carrot"> tags, the script must explicitly target Text Nodes only, ignoring the HTML elements around them.
+Add this to your global JS file, executing after the DOM loads:
+JavaScript
+document.addEventListener("DOMContentLoaded", () => {
+    const selectors = 'h1, h2, h3, h4, h5, h6, .first-level-link, .second-level-link, .nav-link, .dropdown-item';
+    const elements = document.querySelectorAll(selectors);
+
+    elements.forEach(el => {
+        // Iterate only through the immediate child nodes of the element
+        el.childNodes.forEach(node => {
+            // Node.TEXT_NODE is type 3. Ensure it's not just empty whitespace.
+            if (node.nodeType === 3 && node.nodeValue.trim().length > 0) {
+                let text = node.nodeValue.trim().toLowerCase();
+                // Capitalize first letter, re-add spaces if needed
+                node.nodeValue = text.charAt(0).toUpperCase() + text.slice(1) + ' ';
+            }
+        });
+    });
+});
+3. The Safeguard: Automated UI Test Classes
+If you want to enforce this at the team level so a developer doesn't accidentally push "TITLE CASE" to production, you can write a test class using a UI automation framework like Playwright or Selenium integrated with xUnit.
+Here is an example using Playwright in C# to automatically fail a build if headers violate sentence case:
+C#
+using Microsoft.Playwright.NUnit;
+using Xunit;
+using System.Text.RegularExpressions;
+
+public class TypographyTests : PageTest
+{
+    [Fact]
+    public async Task Headers_Should_Be_Sentence_Case()
+    {
+        await Page.GotoAsync("https://localhost:12345");
+
+        // Grab all H2s on the page
+        var headers = await Page.Locator("h2").AllInnerTextsAsync();
+
+        foreach (var header in headers)
+        {
+            if (string.IsNullOrWhiteSpace(header)) continue;
+
+            // Regex: Checks if the first letter is uppercase, and the rest contains no uppercase letters 
+            // (You would need to tweak this regex if you allow acronyms)
+            bool isSentenceCase = Regex.IsMatch(header, @"^[A-Z][^A-Z]*$");
+            
+            Assert.True(isSentenceCase, $"Typography violation: '{header}' is not sentence case.");
+        }
+    }
+}
