@@ -1,0 +1,130 @@
+Use --- on an empty line to divide the content into discrete grid items. The renderer will count these blocks and apply the column classes accordingly.
+Markdown
+:::rcl-row
+### First Card
+This is some content for the first item.
+[Learn More](#)
+---
+### Second Card
+This is some content for the second item.
+<button class="btn btn-primary">Click Me</button>
+:::
+2. The Custom Renderer
+This renderer extracts the :::rcl-row blocks, splits the inner content by the --- delimiter, counts the resulting items, and determines the layout.
+Note: You should run this string replacement before you pass the Markdown string to your Markdown-to-HTML parser (like Markdig), so that the resulting HTML is correctly wrapped around the raw Markdown strings before they get compiled into HTML tags.
+C#
+using System;
+using System.Linq;
+using System.Text;
+using System.Text.RegularExpressions;
+
+namespace WTS.RazorLibrary.Renderers
+{
+    public static class RclRowRenderer
+    {
+        public static string ProcessRowBlocks(string markdown)
+        {
+            if (string.IsNullOrWhiteSpace(markdown)) return string.Empty;
+
+            // Extract everything between :::rcl-row and :::
+            var pattern = @":::rcl-row\r?\n(.*?)\r?\n:::";
+            var regex = new Regex(pattern, RegexOptions.Singleline);
+
+            return regex.Replace(markdown, match =>
+            {
+                var innerContent = match.Groups[1].Value.Trim();
+                return BuildGridHtml(innerContent);
+            });
+        }
+
+        private static string BuildGridHtml(string innerContent)
+        {
+            // Split the content by a standard Markdown horizontal rule (---) on its own line
+            var items = Regex.Split(innerContent, @"\r?\n---\r?\n")
+                             .Select(i => i.Trim())
+                             .Where(i => !string.IsNullOrEmpty(i))
+                             .ToArray();
+
+            var sb = new StringBuilder();
+            
+            sb.AppendLine("<div class=\"container p-a-md\">");
+            sb.AppendLine("  <div class=\"row\">");
+
+            int count = items.Length;
+            string colClass = "";
+
+            // Determine the column class based on item count
+            if (count == 2)
+            {
+                colClass = "col-md-6 m-b-md";
+            }
+            else if (count >= 3)
+            {
+                // Maxes out at 3 per row visually, breaking nicely in Bootstrap
+                colClass = "col-md-4 m-b-md"; 
+            }
+
+            foreach (var item in items)
+            {
+                if (count == 1)
+                {
+                    // Leave as is (no column wrapper)
+                    sb.AppendLine($"    {item}");
+                }
+                else
+                {
+                    // Wrap in the dynamically inferred column class
+                    sb.AppendLine($"    <div class=\"{colClass}\">");
+                    sb.AppendLine($"      {item}");
+                    sb.AppendLine("    </div>");
+                }
+            }
+
+            sb.AppendLine("  </div>");
+            sb.AppendLine("</div>");
+
+            return sb.ToString();
+        }
+    }
+}
+3. The Tag Helper
+Similar to the navigation Tag Helper, this component intercepts the Markdown, processes the row directives, and outputs the HTML.
+C#
+using Microsoft.AspNetCore.Razor.TagHelpers;
+using WTS.RazorLibrary.Renderers;
+
+namespace WTS.RazorLibrary.TagHelpers
+{
+    [HtmlTargetElement("markdown-row-layout")]
+    public class MarkdownRowTagHelper : TagHelper
+    {
+        [HtmlAttributeName("markdown-content")]
+        public string MarkdownContent { get; set; }
+
+        public override void Process(TagHelperContext context, TagHelperOutput output)
+        {
+            // Remove the custom tag from the final DOM
+            output.TagName = null;
+
+            if (string.IsNullOrWhiteSpace(MarkdownContent)) return;
+
+            // Process the custom directives
+            string preProcessedMarkdown = RclRowRenderer.ProcessRowBlocks(MarkdownContent);
+            
+            // IMPORTANT: If you are using Markdig to convert Markdown to HTML, 
+            // you would call it here so the Markdown inside the columns becomes HTML.
+            // e.g., string finalHtml = Markdig.Markdown.ToHtml(preProcessedMarkdown);
+            // Assuming for now you want raw output if you parse it elsewhere:
+            
+            output.Content.SetHtmlContent(preProcessedMarkdown);
+        }
+    }
+}
+4. Razor View Implementation
+Pass the raw markdown into the Tag Helper on your page.
+HTML
+@model string
+
+<section id="dynamic-grid-section">
+    <markdown-row-layout markdown-content="@Model"></markdown-row-layout>
+</section>
