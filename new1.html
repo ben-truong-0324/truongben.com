@@ -1,0 +1,126 @@
+1. Playwright E2E Testing (with MSTest)
+Microsoft provides an official Playwright package specifically for MSTest that handles browser contexts and page instances automatically.
+Setup
+Run these commands in your solution folder to create the test project and install the dependencies:
+Bash
+# Create the MSTest project
+dotnet new mstest -n YourApp.E2ETests
+
+# Add the Playwright MSTest package
+cd YourApp.E2ETests
+dotnet add package Microsoft.Playwright.MSTest
+
+# Build the project so the Playwright installation script is generated
+dotnet build
+
+# Install the Playwright browsers (Requires PowerShell)
+pwsh bin/Debug/net8.0/playwright.ps1 install
+The Test Class
+Because we are using Microsoft.Playwright.MSTest, your test class just needs to inherit from PageTest. This automatically gives you a fresh, isolated Page object for every test.
+Here is an example test that verifies your Vue.js Component Builder actually simulates the HTML when a user interacts with it:
+C#
+using Microsoft.Playwright.MSTest;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Threading.Tasks;
+
+namespace YourApp.E2ETests;
+
+[TestClass]
+public class ComponentBuilderTests : PageTest
+{
+    // Make sure your local app is running before executing the tests!
+    private const string AppUrl = "https://localhost:7001"; // Update to your local port
+
+    [TestMethod]
+    public async Task SelectingComponent_GeneratesLivePreview()
+    {
+        // 1. Navigate to the page we built
+        await Page.GotoAsync($"{AppUrl}/build-a-page");
+
+        // 2. Select the "Card" component from the dropdown (assuming it's at index 0)
+        await Page.Locator("select").First.SelectOptionAsync(new[] { "0" });
+
+        // 3. Select the "primary" variant from the dynamic Vue form
+        await Page.Locator("select").Nth(1).SelectOptionAsync(new[] { "primary" });
+
+        // 4. Type some inner content
+        await Page.Locator("textarea").First.FillAsync("E2E Test Content");
+
+        // 5. Verify the Simulated HTML Preview updated instantly
+        var previewHtml = await Page.Locator(".card-body").First.InnerHTMLAsync();
+        
+        // Assert that Vue injected the content and the correct class template
+        Assert.IsTrue(previewHtml.Contains("E2E Test Content"));
+        Assert.IsTrue(previewHtml.Contains("border-primary"));
+
+        // 6. Verify the Markdown Export updated
+        var markdownExport = await Page.Locator("textarea.font-monospace").InputValueAsync();
+        Assert.IsTrue(markdownExport.Contains("<rcl-card variant=\"primary\">"));
+        Assert.IsTrue(markdownExport.Contains("E2E Test Content"));
+    }
+}
+2. PowerShell Script for Routing & Keyword Filtering
+Razor Pages routing is strictly based on the physical folder structure inside the Pages directory. The file Index.cshtml always maps to the root of its current folder.
+This script recursively searches the Pages folder, reads the content of each .cshtml file to see if it contains your target keyword, and formats the file path into the exact URL route your web app expects.
+Save this as Find-RazorRoutes.ps1 in your project root:
+PowerShell
+param (
+    [Parameter(Mandatory=$false)]
+    [string]$PagesDirectory = ".\Pages",
+    
+    [Parameter(Mandatory=$true)]
+    [string]$Keyword
+)
+
+# Ensure the path exists
+if (-Not (Test-Path $PagesDirectory)) {
+    Write-Error "The directory $PagesDirectory does not exist."
+    exit
+}
+
+# Resolve absolute path to properly trim it later
+$basePath = (Resolve-Path $PagesDirectory).Path
+
+# Get all .cshtml files recursively
+$files = Get-ChildItem -Path $PagesDirectory -Filter "*.cshtml" -Recurse -File
+
+Write-Host "Searching for views containing '$Keyword'..." -ForegroundColor Cyan
+
+foreach ($file in $files) {
+    # Check if the file contains the keyword
+    $containsKeyword = Select-String -Path $file.FullName -Pattern $Keyword -Quiet
+
+    if ($containsKeyword) {
+        # 1. Strip the base "Pages" directory path
+        $relativePath = $file.FullName.Substring($basePath.Length)
+        
+        # 2. Swap Windows backslashes for URL forward slashes
+        $route = $relativePath -replace "\\", "/"
+        
+        # 3. Remove the .cshtml extension
+        $route = $route -replace "\.cshtml$", ""
+        
+        # 4. Handle "Index" routing (e.g., /Index -> /, /Admin/Index -> /Admin)
+        if ($route -match "/Index$") {
+            $route = $route -replace "/Index$", ""
+        }
+        
+        # If the root index was just replaced, it might be empty. Fix it to "/"
+        if ([string]::IsNullOrWhiteSpace($route)) {
+            $route = "/"
+        }
+
+        # Output the matching route
+        Write-Host $route -ForegroundColor Green
+    }
+}
+How to use it
+Run the script from your terminal, passing the keyword you want to search for. For example, if you want to find every page that uses a custom markdown component (like <rcl-card):
+PowerShell
+.\Find-RazorRoutes.ps1 -Keyword "<rcl-"
+Example Output:
+Plaintext
+Searching for views containing '<rcl-'...
+/build-a-page
+/Admin/Dashboard
+/
