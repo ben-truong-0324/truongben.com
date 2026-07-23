@@ -1,0 +1,222 @@
+using System.Collections.Generic;
+
+public class ComponentDefinitions
+{
+    public static List<ComponentDefinition> Definitions = new List<ComponentDefinition>
+    {
+        // 1. Accordion[cite: 1]
+        new ComponentDefinition
+        {
+            Name = "Accordion",
+            Tag = "tcl-accordion",
+            HasContent = true,
+            HtmlTemplate = @"<foo-accordion><details><summary>{Title}</summary><div class='accordion-body'>{_content}</div></details></foo-accordion>",
+            Attributes = new List<ComponentAttribute>
+            {
+                new ComponentAttribute { Name = "Title", InputType = "text" }
+            }
+        },
+
+        // 2. Alert Banner[cite: 1]
+        new ComponentDefinition
+        {
+            Name = "Alert Banner",
+            Tag = "tcl-alert",
+            HasContent = true,
+            HtmlTemplate = @"<div class='alert alert-dismissible alert-banner' role='alert'><div class='container'><img src='{ImageSrc}' alt='{ImageAlt}'><span class='alert-text'><span class='text-bold'>{Title}</span> {_content} <span class='ca-gov-icon-pipe' aria-hidden='true'></span> <a href='{Href}'>{LinkLabel}</a></span><button type='button' class='close ms-lg-auto' data-bs-dismiss='alert' aria-label='Close'><span class='ca-gov-icon-close-mark' aria-hidden='true'></span></button></div></div>",
+            Attributes = new List<ComponentAttribute>
+            {
+                new ComponentAttribute { Name = "Title", InputType = "text" },
+                new ComponentAttribute { Name = "ImageSrc", InputType = "text" },
+                new ComponentAttribute { Name = "ImageAlt", InputType = "text" },
+                new ComponentAttribute { Name = "Href", InputType = "text" },
+                new ComponentAttribute { Name = "LinkLabel", InputType = "text" },
+                new ComponentAttribute { Name = "Variant", InputType = "select", Options = new List<string> { "info", "warning", "success", "danger" } }
+            }
+        },
+
+        // 3. Blockquote[cite: 1]
+        new ComponentDefinition
+        {
+            Name = "Blockquote",
+            Tag = "tcl-blockquote",
+            HasContent = true,
+            HtmlTemplate = @"<blockquote class='{Variant}'><p>{_content}</p><footer>{Author}</footer></blockquote>",
+            Attributes = new List<ComponentAttribute>
+            {
+                new ComponentAttribute { Name = "Author", InputType = "text" },
+                new ComponentAttribute { Name = "Variant", InputType = "select", Options = new List<string> { "default", "no-quotation-mark", "pull-quote", "prominent" } }
+            }
+        },
+
+        // 4. Button[cite: 1]
+        new ComponentDefinition
+        {
+            Name = "Button",
+            Tag = "tcl-button",
+            HasContent = true,
+            HtmlTemplate = @"<a href='{Href}' class='btn btn-{Variant} {SizeClass} {DisabledClass}' role='button'>{_content}</a>",
+            Attributes = new List<ComponentAttribute>
+            {
+                new ComponentAttribute { Name = "Href", InputType = "text" },
+                new ComponentAttribute { Name = "Variant", InputType = "select", Options = new List<string> { "primary", "highlight", "standout", "outline-primary", "outline-highlight", "outline-standout", "default" } },
+                new ComponentAttribute { Name = "SizeClass", InputType = "select", Options = new List<string> { "", "btn-lg", "btn-sm", "btn-xs" } },
+                new ComponentAttribute { Name = "DisabledClass", InputType = "select", Options = new List<string> { "", "disabled" } }
+            }
+        },
+
+        // 5. Countdown[cite: 1]
+        new ComponentDefinition
+        {
+            Name = "Countdown",
+            Tag = "tcl-countdown",
+            HasContent = false,
+            HtmlTemplate = @"<div class='row flex-column flex-md-row countdown p-x'><div class='col {Variant} text-center p-b-md p-l-0 p-r-0'><span class='countdown-text'><abbr title='weeks' aria-label='weeks' class='text-decoration-none'>wks</abbr><br></span><span id='weeks'></span></div><div class='col {Variant} text-center p-b-md p-l-0 p-r-0'><span class='countdown-text'>days<br></span><span id='days'></span></div><div class='col {Variant} text-center p-b-md p-l-0 p-r-0'><span class='countdown-text'><abbr title='hours' aria-label='hours' class='text-decoration-none'>hrs</abbr><br></span><span id='hours'></span></div><div class='col {Variant} text-center p-b-md p-l-0 p-r-0'><span class='countdown-text'><abbr title='minutes' aria-label='minutes' class='text-decoration-none'>mins</abbr><br></span><span id='minutes'></span></div><div class='col {Variant} text-center p-b-md p-l-0 p-r-0'><span class='countdown-text'><abbr title='seconds' aria-label='seconds' class='text-decoration-none'>secs</abbr><br></span><span id='seconds'></span></div></div>",
+            Attributes = new List<ComponentAttribute>
+            {
+                new ComponentAttribute { Name = "Variant", InputType = "select", Options = new List<string> { "bg-default", "section-primary" } }
+            }
+        },
+
+        // 6. Executive Profile[cite: 1]
+        new ComponentDefinition
+        {
+            Name = "Executive Profile",
+            Tag = "tcl-executive-profile",
+            HasContent = false,
+            HtmlTemplate = @"<figure class='executive-profile {Variant}'><img src='{ImageSrc}' alt='{ImageAlt}'><div class='executive-profile-body'><p>{Title}</p><h3 class='executive-name'>{Author}</h3><p>{Agency}</p><p><a href='{Href}'>Bio or contact info</a></p></div></figure>",
+            Attributes = new List<ComponentAttribute>
+            {
+                new ComponentAttribute { Name = "ImageSrc", InputType = "text" },
+                new ComponentAttribute { Name = "ImageAlt", InputType = "text" },
+                new ComponentAttribute { Name = "Title", InputType = "text" },
+                new ComponentAttribute { Name = "Author", InputType = "text" },
+                new ComponentAttribute { Name = "Agency", InputType = "text" },
+                new ComponentAttribute { Name = "Href", InputType = "text" },
+                new ComponentAttribute { Name = "Variant", InputType = "select", Options = new List<string> { "", "bg-transparent", "bg-transparent dark" } }
+            }
+        },
+
+        // 7. Modal[cite: 1]
+        new ComponentDefinition
+        {
+            Name = "Modal",
+            Tag = "tcl-modal",
+            HasContent = true,
+            HtmlTemplate = @"<div class='modal fade' id='{TargetId}' role='dialog' tabindex='-1'><div class='modal-dialog {SizeClass}'><div class='modal-content'><div class='modal-header'><h3 class='h4 modal-title'>{Title}</h3><button type='button' class='close btn btn-secondary' data-bs-dismiss='modal'><span class='sr-only'>Close modal</span><span class='ca-gov-icon-close-mark' aria-hidden='true'></span></button></div><div class='modal-body'>{_content}</div><div class='modal-footer'><button type='button' class='btn btn-default' data-bs-dismiss='modal'>Close</button></div></div></div></div>",
+            Attributes = new List<ComponentAttribute>
+            {
+                new ComponentAttribute { Name = "TargetId", InputType = "text" },
+                new ComponentAttribute { Name = "Title", InputType = "text" },
+                new ComponentAttribute { Name = "SizeClass", InputType = "select", Options = new List<string> { "modal-lg", "modal-md", "modal-sm" } }
+            }
+        },
+
+        // 8. Progress Bar[cite: 1]
+        new ComponentDefinition
+        {
+            Name = "Progress Bar",
+            Tag = "tcl-progress",
+            HasContent = false,
+            HtmlTemplate = @"<div class='progress'><div class='progress-bar {Variant} overflow-auto' role='progressbar' aria-valuenow='{Value}' aria-valuemin='0' aria-valuemax='100' style='width: {Value}%;' tabindex='0'>{Value}%</div></div>",
+            Attributes = new List<ComponentAttribute>
+            {
+                new ComponentAttribute { Name = "Value", InputType = "number" },
+                new ComponentAttribute { Name = "Variant", InputType = "select", Options = new List<string> { "bg-highlight", "bg-primary" } }
+            }
+        },
+
+        // 9. Table[cite: 1]
+        new ComponentDefinition
+        {
+            Name = "Table",
+            Tag = "tcl-table",
+            HasContent = true,
+            HtmlTemplate = @"<table class='table {Variant}'>{_content}</table>",
+            Attributes = new List<ComponentAttribute>
+            {
+                new ComponentAttribute { Name = "Variant", InputType = "select", Options = new List<string> { "", "table-default", "table-striped" } }
+            }
+        },
+
+        // 10. Hero Banner (Header Primary Banner)[cite: 1]
+        new ComponentDefinition
+        {
+            Name = "Hero Banner",
+            Tag = "tcl-hero-banner",
+            HasContent = true,
+            HtmlTemplate = @"<div class='header-primary-banner d-flex justify-content-center align-items-center' style='background-image: url(""{ImageSrc}"");'><div class='container p-y-lg'><div class='row'><div class='col-sm color-white text-center p-a-lg'><h2 class='text-3rem m-t-0 overflow-visible'>{Title}</h2><p class='text-1-5rem line-height-1-5em'>{_content}</p><div class='btn-row p-b'><a href='{Href}' class='btn btn-lg btn-highlight m-t'>{LinkLabel}</a></div></div></div></div></div>",
+            Attributes = new List<ComponentAttribute>
+            {
+                new ComponentAttribute { Name = "ImageSrc", InputType = "text" },
+                new ComponentAttribute { Name = "Title", InputType = "text" },
+                new ComponentAttribute { Name = "Href", InputType = "text" },
+                new ComponentAttribute { Name = "LinkLabel", InputType = "text" }
+            }
+        },
+
+        // 11. Feature Card[cite: 1]
+        new ComponentDefinition
+        {
+            Name = "Feature Card",
+            Tag = "tcl-feature-card",
+            HasContent = true,
+            HtmlTemplate = @"<div class='row bg-gray-light'><div class='col-md-6 col-lg-4 p-a-md order-2 order-md-1'><h2 class='h3 m-t-0'>{Title}</h2><p>{_content}</p><a href='{Href}' class='btn btn-primary m-y-md'>{LinkLabel}</a></div><div class='col-lg-8 col-md-6 p-0 text-right order-1 order-md-2 d-flex justify-content-center'><a href='{Href}' class='feature-img' style='background: url(""{ImageSrc}"")' aria-label='{ImageAlt}'></a></div></div>",
+            Attributes = new List<ComponentAttribute>
+            {
+                new ComponentAttribute { Name = "Title", InputType = "text" },
+                new ComponentAttribute { Name = "Href", InputType = "text" },
+                new ComponentAttribute { Name = "LinkLabel", InputType = "text" },
+                new ComponentAttribute { Name = "ImageSrc", InputType = "text" },
+                new ComponentAttribute { Name = "ImageAlt", InputType = "text" }
+            }
+        },
+
+        // 12. Standard Card[cite: 1]
+        new ComponentDefinition
+        {
+            Name = "Card",
+            Tag = "tcl-card",
+            HasContent = true,
+            HtmlTemplate = @"<div class='card pos-rel'><img class='card-img {ImageClass}' src='{ImageSrc}' alt='{ImageAlt}'><div class='card-body {Variant}'><h3 class='{TitleClass}'><a href='{Href}' class='link-before'>{Title}</a></h3><p>{_content}</p></div></div>",
+            Attributes = new List<ComponentAttribute>
+            {
+                new ComponentAttribute { Name = "Title", InputType = "text" },
+                new ComponentAttribute { Name = "TitleClass", InputType = "text" },
+                new ComponentAttribute { Name = "Href", InputType = "text" },
+                new ComponentAttribute { Name = "ImageSrc", InputType = "text" },
+                new ComponentAttribute { Name = "ImageAlt", InputType = "text" },
+                new ComponentAttribute { Name = "ImageClass", InputType = "select", Options = new List<string> { "", "d-none" } },
+                new ComponentAttribute { Name = "Variant", InputType = "select", Options = new List<string> { "bg-default", "bg-default bg-default-hover" } }
+            }
+        },
+
+        // 13. Grid Link[cite: 1]
+        new ComponentDefinition
+        {
+            Name = "Grid Link",
+            Tag = "tcl-grid-link",
+            HasContent = true,
+            HtmlTemplate = @"<div class='col-md-4 mb-4'><a href='{Href}' class='link-grid'>{_content}</a></div>",
+            Attributes = new List<ComponentAttribute>
+            {
+                new ComponentAttribute { Name = "Href", InputType = "text" }
+            }
+        },
+
+        // 14. Step List / Timeline Step[cite: 1]
+        new ComponentDefinition
+        {
+            Name = "Process Step",
+            Tag = "tcl-process-step",
+            HasContent = true,
+            HtmlTemplate = @"<div class='col-sm-3 text-sm-center d-flex d-sm-block'><div class='dot-line {Variant}'><span class='dot-line-inner {ContainerClass}'></span></div><div class='dot-text'><h3 class='h5 m-b'>{Title}</h3><p class='mb-4'>{_content}</p></div></div>",
+            Attributes = new List<ComponentAttribute>
+            {
+                new ComponentAttribute { Name = "Title", InputType = "text" },
+                new ComponentAttribute { Name = "Variant", InputType = "select", Options = new List<string> { "brd-transparent-before brd-gray-light-after", "progress-bold brd-primary-light-before brd-primary-light-after" } },
+                new ComponentAttribute { Name = "ContainerClass", InputType = "text" }
+            }
+        }
+    };
+}
